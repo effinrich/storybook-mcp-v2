@@ -11,6 +11,7 @@ import { getTemplate, getTemplates } from './utils/templates.js'
 import { generateTest, writeTestFile } from './utils/test-generator.js'
 import { generateDocs, writeDocsFile } from './utils/docs-generator.js'
 import { initializeComponents, syncSingleComponent } from './utils/initializer.js'
+import { validateLicense, requireFeature } from './utils/license.js'
 
 /**
  * Tool: list_components
@@ -76,6 +77,14 @@ export async function generateStoryTool(
     dryRun?: boolean
   }
 ) {
+  // Check license
+  const license = validateLicense(config)
+  
+  // Check template restrictions
+  if (args.template && args.template !== 'basic') {
+    requireFeature('advanced_templates', license)
+  }
+
   // First analyze the component
   const analysis = await analyzeComponent(config, args.componentPath)
 
@@ -138,6 +147,12 @@ export async function getStoryTemplate(
     template: string
   }
 ) {
+  // Check license
+  const license = validateLicense(config)
+  if (args.template !== 'basic') {
+    requireFeature('advanced_templates', license)
+  }
+
   const template = getTemplate(args.template)
 
   if (!template) {
@@ -159,16 +174,27 @@ export async function getStoryTemplate(
  * List all available story templates
  */
 export async function listTemplates(_config: StorybookMCPConfig) {
+  // Check license
+  const license = validateLicense(config)
+  const isPro = license.tier === 'pro'
+
+  // Filter templates based on license
   const templates = getTemplates()
-  const list = Array.from(templates.entries()).map(([name, template]) => ({
-    name,
-    description: template.description,
-    useCase: template.useCase,
-  }))
+  const list = Array.from(templates.entries())
+    .map(([name, template]) => {
+      const isBasic = name === 'basic'
+      return {
+        name,
+        description: template.description + (isBasic || isPro ? '' : ' (Pro Only)'),
+        useCase: template.useCase,
+        available: isBasic || isPro
+      }
+    })
 
   return {
     templates: list,
     count: list.length,
+    tier: license.tier
   }
 }
 
@@ -264,14 +290,41 @@ export async function syncAll(
     dryRun?: boolean
   }
 ) {
-  const result = await initializeComponents(config, {
+  // Check license for limits
+  const license = validateLicense(config)
+  
+  // If requesting features not allowed in free tier, warn/disable them
+  const options = {
     library: args?.library,
     generateStories: args?.generateStories ?? true,
     generateTests: args?.generateTests ?? true,
     generateDocs: args?.generateDocs ?? true,
     updateExisting: args?.updateExisting ?? true,
     dryRun: args?.dryRun ?? false,
-  })
+  }
+
+  // Force disable Pro features if no license
+  if (license.tier === 'free') {
+    if (options.generateTests) {
+      console.error('[storybook-mcp] Warning: Test generation disabled (Free Tier)')
+      options.generateTests = false
+    }
+    if (options.generateDocs) {
+      console.error('[storybook-mcp] Warning: Docs generation disabled (Free Tier)')
+      options.generateDocs = false
+    }
+  }
+
+  const result = await initializeComponents(config, options)
+
+  // Apply sync limit for free tier
+  if (license.tier === 'free' && result.scanned > license.maxSyncLimit) {
+    return {
+      ...result,
+      summary: `Free Tier Limit: Synced first ${license.maxSyncLimit} components only. Upgrade to Pro for unlimited sync.`,
+      warning: 'Sync limit reached (5 components max for Free Tier)'
+    }
+  }
 
   return {
     ...result,
@@ -326,6 +379,10 @@ export async function generateTestTool(
     dryRun?: boolean
   }
 ) {
+  // Check license
+  const license = validateLicense(config)
+  requireFeature('test_generation', license)
+
   const analysis = await analyzeComponent(config, args.componentPath)
   const test = await generateTest(config, analysis)
 
@@ -358,6 +415,10 @@ export async function generateDocsTool(
     dryRun?: boolean
   }
 ) {
+  // Check license
+  const license = validateLicense(config)
+  requireFeature('docs_generation', license)
+
   const analysis = await analyzeComponent(config, args.componentPath)
   const docs = await generateDocs(config, analysis)
 

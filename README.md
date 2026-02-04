@@ -15,6 +15,39 @@ When the MCP server starts, it automatically:
 
 This means your Storybook documentation stays in sync with your components automatically.
 
+## License & Pricing
+
+**This tool follows a "Free for Basic / Paid for Pro" model.**
+
+### Free Tier
+Perfect for individuals and trying out the tool.
+*   ✅ List and analyze components
+*   ✅ Generate basic stories (`basic` template)
+*   ✅ Sync up to 5 components per run
+*   ❌ Advanced templates (`with-msw`, `form`, etc.)
+*   ❌ Test generation (`generate_test`)
+*   ❌ Docs generation (`generate_docs`)
+
+### Pro Tier
+For professional teams requiring complete coverage.
+*   ✅ **Unlimited** sync
+*   ✅ **All** templates (Interactive, MSW, Router, etc.)
+*   ✅ **Test generation** (Playwright/Vitest)
+*   ✅ **Docs generation** (MDX)
+*   ✅ Priority support
+
+### Activation
+To activate Pro features, add your license key to the config:
+
+```json
+{
+  "licenseKey": "FORGE-PRO-XXXX-XXXX"
+}
+```
+
+Or set the environment variable:
+`STORYBOOK_MCP_LICENSE=FORGE-PRO-XXXX-XXXX`
+
 ## Features
 
 | Tool                     | Description                                                  |
