@@ -1,4 +1,4 @@
-# @forgekit/storybook-mcp
+# forgekit-storybook-mcp
 
 A **Model Context Protocol (MCP) server** for Storybook story generation, component analysis, and validation.
 
@@ -68,9 +68,9 @@ Or set the environment variable:
 ## Installation
 
 ```bash
-npm install @forgekit/storybook-mcp
+npm install forgekit-storybook-mcp
 # or
-pnpm add @forgekit/storybook-mcp
+pnpm add forgekit-storybook-mcp
 ```
 
 ## Configuration
@@ -141,7 +141,7 @@ Add to `.vscode/mcp.json`:
   "mcpServers": {
     "storybook": {
       "command": "npx",
-      "args": ["@forgekit/storybook-mcp"]
+      "args": ["forgekit-storybook-mcp"]
     }
   }
 }
@@ -154,7 +154,7 @@ Or if installed locally:
   "mcpServers": {
     "storybook": {
       "command": "node",
-      "args": ["node_modules/@forgekit/storybook-mcp/dist/cli.js"]
+      "args": ["node_modules/forgekit-storybook-mcp/dist/cli.js"]
     }
   }
 }
@@ -169,7 +169,7 @@ Add to `claude_desktop_config.json`:
   "mcpServers": {
     "storybook": {
       "command": "npx",
-      "args": ["@forgekit/storybook-mcp"],
+      "args": ["forgekit-storybook-mcp"],
       "cwd": "/path/to/your/project"
     }
   }
@@ -180,24 +180,24 @@ Add to `claude_desktop_config.json`:
 
 ```bash
 # Run with auto-sync (default)
-npx @forgekit/storybook-mcp
+npx forgekit-storybook-mcp
 
 # Skip auto-sync on startup
-npx @forgekit/storybook-mcp --skip-init
+npx forgekit-storybook-mcp --skip-init
 
 # Preview what would be synced without writing
-npx @forgekit/storybook-mcp --dry-run
+npx forgekit-storybook-mcp --dry-run
 
 # Only run sync, then exit (useful for CI)
-npx @forgekit/storybook-mcp --init-only
+npx forgekit-storybook-mcp --init-only
 
 # Disable specific generators
-npx @forgekit/storybook-mcp --no-stories
-npx @forgekit/storybook-mcp --no-tests
-npx @forgekit/storybook-mcp --no-docs
+npx forgekit-storybook-mcp --no-stories
+npx forgekit-storybook-mcp --no-tests
+npx forgekit-storybook-mcp --no-docs
 
 # Don't update existing files (only create missing)
-npx @forgekit/storybook-mcp --no-update
+npx forgekit-storybook-mcp --no-update
 ```
 
 ## Tool Examples
@@ -324,7 +324,7 @@ The MCP also provides resources:
 ## Programmatic Usage
 
 ```typescript
-import { createStorybookMCPServer } from '@forgekit/storybook-mcp'
+import { createStorybookMCPServer } from 'forgekit-storybook-mcp'
 
 const server = createStorybookMCPServer({
   rootDir: process.cwd(),
@@ -335,7 +335,7 @@ const server = createStorybookMCPServer({
 
 ## Related
 
-- [@forgekit/chakra-mcp](https://github.com/effinrich/chakra-mcp) — Chakra UI + Figma sync MCP
+- [forgekit-chakra-mcp](https://github.com/effinrich/chakra-mcp) — Chakra UI + Figma sync MCP
 - [@storybook/addon-mcp](https://github.com/storybookjs/mcp) — Official Storybook MCP (reads stories)
 
 This MCP focuses on **generating** stories, while the official one focuses on **reading** existing Storybook data. They complement each other.
