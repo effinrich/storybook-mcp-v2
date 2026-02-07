@@ -58,14 +58,14 @@ export async function generateStory(
     }
   }
 
-  // Interactive story
-  if (includeInteractive) {
+  // Interactive story (Web only)
+  if (includeInteractive && config.framework !== 'react-native' && !analysis.dependencies.usesReactNative) {
     content += '\n' + buildInteractiveStory(analysis)
     stories.push('Interactive')
   }
 
-  // Accessibility story
-  if (includeA11y) {
+  // Accessibility story (Web only)
+  if (includeA11y && config.framework !== 'react-native' && !analysis.dependencies.usesReactNative) {
     content += '\n' + buildA11yStory(analysis)
     stories.push('Accessibility')
   }
@@ -128,8 +128,10 @@ function buildImports(
     `import type { Meta, StoryObj } from '@storybook/react'`,
   ]
 
-  // Add test utilities if interactive
-  if (options.includeInteractive || options.includeA11y) {
+  // Add test utilities if interactive (only for web)
+  if ((options.includeInteractive || options.includeA11y) && 
+      framework !== 'react-native' && 
+      !analysis.dependencies.usesReactNative) {
     imports.push(`import { expect, userEvent, within } from '@storybook/test'`)
   }
 
@@ -161,6 +163,19 @@ function buildImports(
   if (framework === 'react-native' || analysis.dependencies.usesReactNative) {
     // React Native specific imports
     imports.push(`import { View } from 'react-native'`)
+    
+    // Remove web-only imports that might have been added by default
+    const webImports = [
+      `import { expect, userEvent, within } from '@storybook/test'`,
+      `import { withRouter } from 'storybook-addon-remix-react-router'`
+    ]
+    
+    for (const imp of webImports) {
+      const index = imports.indexOf(imp)
+      if (index !== -1) {
+        imports.splice(index, 1)
+      }
+    }
   }
 
   return imports
