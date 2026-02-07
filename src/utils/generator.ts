@@ -89,6 +89,10 @@ export async function generateStory(
     warnings.push('Component uses React Query - ensure QueryClientProvider is in decorators')
   }
 
+  if (analysis.dependencies.usesGluestack) {
+    warnings.push('Component uses Gluestack UI - ensure GluestackUIProvider is in decorators (usually in .storybook/preview.tsx)')
+  }
+
   return {
     content,
     filePath: storyPath,
@@ -144,6 +148,10 @@ function buildImports(
   // Add framework-specific imports
   if (framework === 'chakra' && analysis.dependencies.usesChakra) {
     // ChakraProvider is typically in .storybook/preview.tsx
+  }
+
+  if (framework === 'gluestack' && analysis.dependencies.usesGluestack) {
+    // GluestackUIProvider is typically in .storybook/preview.tsx
   }
 
   return imports

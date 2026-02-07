@@ -14,7 +14,7 @@ export interface StorybookMCPConfig {
   libraries: LibraryConfig[]
   
   /** UI framework being used */
-  framework: 'chakra' | 'shadcn' | 'tamagui' | 'vanilla' | 'custom'
+  framework: 'chakra' | 'shadcn' | 'tamagui' | 'gluestack' | 'vanilla' | 'custom'
   
   /** Story file naming convention */
   storyFilePattern: string
@@ -122,6 +122,9 @@ export interface DependencyInfo {
   
   /** Uses Chakra UI */
   usesChakra: boolean
+
+  /** Uses Gluestack UI */
+  usesGluestack: boolean
   
   /** Uses Emotion */
   usesEmotion: boolean

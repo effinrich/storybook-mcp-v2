@@ -2,7 +2,7 @@
 
 A **Model Context Protocol (MCP) server** for Storybook story generation, component analysis, and validation.
 
-**Framework-agnostic** — works with Chakra UI, shadcn/ui, Tamagui, or vanilla React.
+**Framework-agnostic** — works with Chakra UI, shadcn/ui, Tamagui, Gluestack UI, or vanilla React.
 
 ## Key Feature: Auto-Sync on Startup
 
@@ -130,7 +130,7 @@ Add to your `package.json`:
 If no config is found, the MCP will auto-detect:
 
 - Component directories (`src/components`, `libs/ui/src`, etc.)
-- Framework from dependencies (Chakra, shadcn, Tamagui)
+- Framework from dependencies (Chakra, shadcn, Tamagui, Gluestack)
 
 ## Usage with Claude Code
 

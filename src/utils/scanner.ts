@@ -289,6 +289,7 @@ function analyzeDependencies(source: string): DependencyInfo {
     usesRouter: /from ['"]react-router|from ['"]@tanstack\/react-router|from ['"]next\/navigation/.test(source),
     usesReactQuery: /from ['"]@tanstack\/react-query|from ['"]react-query/.test(source),
     usesChakra: /from ['"]@chakra-ui/.test(source),
+    usesGluestack: /from ['"]@gluestack-ui/.test(source),
     usesEmotion: /from ['"]@emotion/.test(source),
     usesTailwind: /className=.*['"](.*?(flex|grid|p-|m-|bg-|text-).*?)['"]/.test(source),
     usesFramerMotion: /from ['"]framer-motion/.test(source),
@@ -353,6 +354,10 @@ function generateSuggestions(
   
   if (deps.usesChakra) {
     suggestions.push('Component uses Chakra UI - ensure ChakraProvider is in decorators')
+  }
+
+  if (deps.usesGluestack) {
+    suggestions.push('Component uses Gluestack UI - ensure GluestackUIProvider is in decorators')
   }
   
   if (deps.usesGlobalState) {

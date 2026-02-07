@@ -173,6 +173,8 @@ async function autoDetectConfig(rootDir: string): Promise<StorybookMCPConfig> {
       framework = 'shadcn'
     } else if (deps['tamagui']) {
       framework = 'tamagui'
+    } else if (deps['@gluestack-ui/themed'] || deps['@gluestack-ui/config']) {
+      framework = 'gluestack'
     }
   }
 
