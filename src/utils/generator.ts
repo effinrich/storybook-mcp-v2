@@ -93,6 +93,10 @@ export async function generateStory(
     warnings.push('Component uses Gluestack UI - ensure GluestackUIProvider is in decorators (usually in .storybook/preview.tsx)')
   }
 
+  if (analysis.dependencies.usesReactNative) {
+    warnings.push('Component uses React Native - ensure @storybook/react-native is configured')
+  }
+
   return {
     content,
     filePath: storyPath,
@@ -152,6 +156,11 @@ function buildImports(
 
   if (framework === 'gluestack' && analysis.dependencies.usesGluestack) {
     // GluestackUIProvider is typically in .storybook/preview.tsx
+  }
+
+  if (framework === 'react-native' || analysis.dependencies.usesReactNative) {
+    // React Native specific imports
+    imports.push(`import { View } from 'react-native'`)
   }
 
   return imports

@@ -290,6 +290,7 @@ function analyzeDependencies(source: string): DependencyInfo {
     usesReactQuery: /from ['"]@tanstack\/react-query|from ['"]react-query/.test(source),
     usesChakra: /from ['"]@chakra-ui/.test(source),
     usesGluestack: /from ['"]@gluestack-ui/.test(source),
+    usesReactNative: /from ['"]react-native['"]/.test(source) || /from ['"]expo-/.test(source),
     usesEmotion: /from ['"]@emotion/.test(source),
     usesTailwind: /className=.*['"](.*?(flex|grid|p-|m-|bg-|text-).*?)['"]/.test(source),
     usesFramerMotion: /from ['"]framer-motion/.test(source),
@@ -358,6 +359,10 @@ function generateSuggestions(
 
   if (deps.usesGluestack) {
     suggestions.push('Component uses Gluestack UI - ensure GluestackUIProvider is in decorators')
+  }
+
+  if (deps.usesReactNative) {
+    suggestions.push('Component uses React Native - ensure stories are configured for on-device or web preview')
   }
   
   if (deps.usesGlobalState) {
