@@ -4,6 +4,37 @@ A **Model Context Protocol (MCP) server** for Storybook story generation, compon
 
 **Framework-agnostic** — works with Chakra UI, shadcn/ui, Tamagui, Gluestack UI, React Native, or vanilla React.
 
+---
+
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Key Feature: Auto-Sync on Startup](#key-feature-auto-sync-on-startup)
+- [License & Pricing](#license--pricing)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [CLI Flags](#cli-flags)
+- [MCP Client Setup](#mcp-client-setup)
+- [Tools Reference](#tools-reference)
+- [Templates](#templates)
+- [Resources](#resources)
+- [Programmatic Usage](#programmatic-usage)
+
+---
+
+## Quick Start
+
+```bash
+# 1. Install the package
+npm install forgekit-storybook-mcp
+
+# 2. Add to your MCP client config (see "MCP Client Setup" section)
+
+# 3. That's it! The MCP will auto-detect your components and framework
+```
+
+---
+
 ## Key Feature: Auto-Sync on Startup
 
 When the MCP server starts, it automatically:
@@ -15,29 +46,34 @@ When the MCP server starts, it automatically:
 
 This means your Storybook documentation stays in sync with your components automatically.
 
+---
+
 ## License & Pricing
 
 **This tool follows a "Free for Basic / Paid for Pro" model.**
 
 ### Free Tier
 Perfect for individuals and trying out the tool.
-*   ✅ List and analyze components
-*   ✅ Generate basic stories (`basic` template)
-*   ✅ Sync up to 5 components per run
-*   ❌ Advanced templates (`with-msw`, `form`, etc.)
-*   ❌ Test generation (`generate_test`)
-*   ❌ Docs generation (`generate_docs`)
+- ✅ List and analyze components
+- ✅ Generate basic stories (`basic` template)
+- ✅ Sync up to 5 components per run
+- ❌ Advanced templates (`with-msw`, `form`, etc.)
+- ❌ Test generation (`generate_test`)
+- ❌ Docs generation (`generate_docs`)
 
 ### Pro Tier
 For professional teams requiring complete coverage.
-*   ✅ **Unlimited** sync
-*   ✅ **All** templates (Interactive, MSW, Router, etc.)
-*   ✅ **Test generation** (Playwright/Vitest)
-*   ✅ **Docs generation** (MDX)
-*   ✅ Priority support
+- ✅ **Unlimited** sync
+- ✅ **All** templates (Interactive, MSW, Router, etc.)
+- ✅ **Test generation** (Playwright/Vitest)
+- ✅ **Docs generation** (MDX)
+- ✅ Priority support
 
 ### Activation
-To activate Pro features, add your license key to the config:
+
+**Option 1: Config file**
+
+Add to `storybook-mcp.config.json`:
 
 ```json
 {
@@ -45,27 +81,13 @@ To activate Pro features, add your license key to the config:
 }
 ```
 
-Or set the environment variable:
+**Option 2: Environment variable**
+
 ```bash
-STORYBOOK_MCP_LICENSE=FORGE-PRO-XXXX-XXXX
+export STORYBOOK_MCP_LICENSE=FORGE-PRO-XXXX-XXXX
 ```
 
-## Features
-
-| Tool                     | Description                                                  |
-| ------------------------ | ------------------------------------------------------------ |
-| `list_components`        | List all React components, filter by library or story status |
-| `analyze_component`      | Extract props, dependencies, and get story suggestions       |
-| `generate_story`         | Generate complete story files with variants and tests        |
-| `generate_test`          | Generate Playwright/Vitest test files                        |
-| `generate_docs`          | Generate MDX documentation                                   |
-| `validate_story`         | Check stories for best practices and issues                  |
-| `sync_all`               | Manually trigger full sync of all components                 |
-| `sync_component`         | Sync a single component's story/test/docs                    |
-| `get_story_template`     | Get templates for different story types                      |
-| `list_templates`         | List all available templates                                 |
-| `get_component_coverage` | Get story coverage statistics                                |
-| `suggest_stories`        | Get prioritized list of components needing stories           |
+---
 
 ## Installation
 
@@ -73,13 +95,17 @@ STORYBOOK_MCP_LICENSE=FORGE-PRO-XXXX-XXXX
 npm install forgekit-storybook-mcp
 # or
 pnpm add forgekit-storybook-mcp
+# or
+yarn add forgekit-storybook-mcp
 ```
+
+---
 
 ## Configuration
 
-**Important:** Configuration files define your project structure. Tool options (like `includeInteractive`, `includeVariants`) are passed as arguments when calling MCP tools, not in config files.
+You have three options for configuration, in order of priority:
 
-### Option 1: Config File
+### Option 1: Config File (Recommended)
 
 Create `storybook-mcp.config.json` in your project root:
 
@@ -112,10 +138,11 @@ Create `storybook-mcp.config.json` in your project root:
 
 ### Option 2: package.json
 
-Add to your `package.json`:
+Add a `storybook-mcp` field to your `package.json`:
 
 ```json
 {
+  "name": "my-app",
   "storybook-mcp": {
     "framework": "shadcn",
     "libraries": [
@@ -133,12 +160,81 @@ Add to your `package.json`:
 
 If no config is found, the MCP will auto-detect:
 
-- Component directories (`src/components`, `libs/ui/src`, etc.)
-- Framework from dependencies (Chakra, shadcn, Tamagui, Gluestack, React Native)
+- **Component directories**: `src/components`, `libs/ui/src`, `packages/ui/src`, etc.
+- **Framework**: Detected from your `package.json` dependencies (Chakra, shadcn, Tamagui, Gluestack, React Native)
 
-## Usage with Claude Code
+### Configuration Reference
 
-Add to `.vscode/mcp.json`:
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `rootDir` | `string` | Auto-detected | Project root directory |
+| `framework` | `string` | `'vanilla'` | UI framework: `'chakra'`, `'shadcn'`, `'tamagui'`, `'gluestack'`, `'react-native'`, `'vanilla'`, `'custom'` |
+| `libraries` | `array` | `[]` | Component library locations (see below) |
+| `storyFilePattern` | `string` | `'**/*.stories.{ts,tsx}'` | Glob pattern for story files |
+| `componentPatterns` | `string[]` | `['**/src/**/*.tsx', '!**/*.stories.tsx', '!**/*.test.tsx']` | Glob patterns for component files |
+| `excludePatterns` | `string[]` | `['**/node_modules/**', '**/dist/**']` | Directories to exclude |
+| `licenseKey` | `string` | — | Pro license key |
+| `templatesDir` | `string` | — | Custom templates directory |
+| `storybookVersion` | `7 \| 8` | `8` | Storybook version |
+
+### Library Configuration
+
+Each library in the `libraries` array supports:
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `name` | `string` | ✅ | Library identifier for filtering |
+| `path` | `string` | ✅ | Path relative to `rootDir` |
+| `storyTitlePrefix` | `string` | ✅ | Prefix for Storybook titles (e.g., `"UI"` → `"UI/Button"`) |
+| `decorators` | `string[]` | — | Default decorators to apply to all stories |
+| `importAlias` | `string` | — | Import path alias (e.g., `"@ui"`) |
+
+---
+
+## CLI Flags
+
+```bash
+# Run with auto-sync (default behavior)
+npx forgekit-storybook-mcp
+
+# Skip auto-sync on startup - useful when you just want the MCP tools
+npx forgekit-storybook-mcp --skip-init
+
+# Preview what would be synced without writing any files
+npx forgekit-storybook-mcp --dry-run
+
+# Only run sync, then exit (useful for CI pipelines)
+npx forgekit-storybook-mcp --init-only
+
+# Disable specific generators during sync
+npx forgekit-storybook-mcp --no-stories    # Don't generate story files
+npx forgekit-storybook-mcp --no-tests      # Don't generate test files
+npx forgekit-storybook-mcp --no-docs       # Don't generate MDX docs
+
+# Only create missing files, don't update existing ones
+npx forgekit-storybook-mcp --no-update
+```
+
+### Combining Flags
+
+```bash
+# CI pipeline: sync stories only, exit when done
+npx forgekit-storybook-mcp --init-only --no-tests --no-docs
+
+# Development: skip sync, just run the MCP server
+npx forgekit-storybook-mcp --skip-init
+
+# Preview: see what would change without modifying files
+npx forgekit-storybook-mcp --dry-run --no-update
+```
+
+---
+
+## MCP Client Setup
+
+### Cursor / VS Code
+
+Add to `.cursor/mcp.json` (or `.vscode/mcp.json`):
 
 ```json
 {
@@ -151,7 +247,20 @@ Add to `.vscode/mcp.json`:
 }
 ```
 
-Or if installed locally:
+With CLI flags:
+
+```json
+{
+  "mcpServers": {
+    "storybook": {
+      "command": "npx",
+      "args": ["forgekit-storybook-mcp", "--skip-init"]
+    }
+  }
+}
+```
+
+If installed locally (faster startup):
 
 ```json
 {
@@ -164,7 +273,7 @@ Or if installed locally:
 }
 ```
 
-## Usage with Claude Desktop
+### Claude Desktop
 
 Add to `claude_desktop_config.json`:
 
@@ -180,255 +289,251 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-## CLI Flags
+---
 
-```bash
-# Run with auto-sync (default)
-npx forgekit-storybook-mcp
+## Tools Reference
 
-# Skip auto-sync on startup
-npx forgekit-storybook-mcp --skip-init
+| Tool | Description |
+|------|-------------|
+| [`list_components`](#list_components) | List all React components, filter by library or story status |
+| [`analyze_component`](#analyze_component) | Extract props, dependencies, and get story suggestions |
+| [`generate_story`](#generate_story) | Generate complete story files with variants and tests |
+| [`generate_test`](#generate_test) | Generate Playwright/Vitest test files (Pro) |
+| [`generate_docs`](#generate_docs) | Generate MDX documentation (Pro) |
+| [`validate_story`](#validate_story) | Check stories for best practices and issues |
+| [`sync_all`](#sync_all) | Sync all components at once |
+| [`sync_component`](#sync_component) | Sync a single component's story/test/docs |
+| [`get_story_template`](#get_story_template) | Get a specific template |
+| [`list_templates`](#list_templates) | List all available templates |
+| [`get_component_coverage`](#get_component_coverage) | Get story coverage statistics |
+| [`suggest_stories`](#suggest_stories) | Get prioritized list of components needing stories |
 
-# Preview what would be synced without writing
-npx forgekit-storybook-mcp --dry-run
-
-# Only run sync, then exit (useful for CI)
-npx forgekit-storybook-mcp --init-only
-
-# Disable specific generators
-npx forgekit-storybook-mcp --no-stories
-npx forgekit-storybook-mcp --no-tests
-npx forgekit-storybook-mcp --no-docs
-
-# Don't update existing files (only create missing)
-npx forgekit-storybook-mcp --no-update
-```
-
-## Tool Examples
+---
 
 ### `list_components`
 
-List all components, optionally filtered by library or story status.
+List all React components in configured libraries.
 
-**Example 1: List all components**
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `library` | `string` | — | all | Filter by library name |
+| `hasStory` | `boolean` | — | all | Filter by story status: `true` = only with stories, `false` = only without |
+
+**Examples:**
+
 ```json
+// List ALL components across all libraries
+{}
+
+// List only components in the "ui" library
 {
-  "tool": "list_components"
+  "library": "ui"
 }
-```
 
-**Example 2: List components in a specific library**
-```json
+// List components that DON'T have stories yet
 {
-  "tool": "list_components",
-  "arguments": {
-    "library": "ui"
-  }
+  "hasStory": false
 }
-```
 
-**Example 3: List only components without stories**
-```json
+// List components in "shared" library that need stories
 {
-  "tool": "list_components",
-  "arguments": {
-    "hasStory": false
-  }
-}
-```
-
-**Example 4: List components in a library that don't have stories**
-```json
-{
-  "tool": "list_components",
-  "arguments": {
-    "library": "ui",
-    "hasStory": false
-  }
+  "library": "shared",
+  "hasStory": false
 }
 ```
 
 **Response:**
+
 ```json
 {
   "components": [
     {
       "name": "Button",
       "filePath": "libs/ui/src/button/button.tsx",
+      "library": "ui",
       "hasStory": false,
-      "library": "ui"
+      "exportType": "named"
     },
     {
       "name": "Card",
       "filePath": "libs/ui/src/card/card.tsx",
-      "hasStory": false,
-      "library": "ui"
+      "library": "ui",
+      "hasStory": true,
+      "storyPath": "libs/ui/src/card/card.stories.tsx",
+      "exportType": "default"
     }
   ],
   "total": 2,
-  "withStories": 0,
-  "withoutStories": 2
+  "withStories": 1,
+  "withoutStories": 1,
+  "summary": "Found 2 components: 1 with stories, 1 without stories"
 }
 ```
+
+---
 
 ### `analyze_component`
 
-Analyze a component to extract props, dependencies, and get story generation suggestions.
+Analyze a React component to extract its structure, props, and dependencies.
 
-**Example: Analyze a component**
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `componentPath` | `string` | ✅ | Path to the component file |
+
+**Example:**
+
 ```json
 {
-  "tool": "analyze_component",
-  "arguments": {
-    "componentPath": "libs/ui/src/button/button.tsx"
-  }
+  "componentPath": "libs/ui/src/button/button.tsx"
 }
 ```
 
-**Response includes:**
-- Extracted props with types
-- Detected dependencies (Router, React Query, Chakra, etc.)
-- Suggestions for story generation
-- Source code preview
-- Library information
-- Story file path (if exists)
+**Response:**
 
-**Example Response:**
 ```json
 {
   "analysis": {
     "name": "Button",
     "filePath": "libs/ui/src/button/button.tsx",
     "library": "ui",
+    "hasStory": false,
+    "exportType": "named",
     "props": [
       {
-        "name": "children",
-        "type": "React.ReactNode",
-        "required": true
+        "name": "variant",
+        "type": "'solid' | 'outline' | 'ghost'",
+        "required": false,
+        "defaultValue": "'solid'",
+        "description": "Visual style variant",
+        "controlType": "select",
+        "controlOptions": ["solid", "outline", "ghost"]
       },
       {
-        "name": "variant",
-        "type": "'primary' | 'secondary' | 'outline'",
+        "name": "size",
+        "type": "'sm' | 'md' | 'lg'",
         "required": false,
-        "defaultValue": "'primary'"
+        "defaultValue": "'md'",
+        "controlType": "select",
+        "controlOptions": ["sm", "md", "lg"]
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false,
+        "defaultValue": "false",
+        "controlType": "boolean"
+      },
+      {
+        "name": "children",
+        "type": "ReactNode",
+        "required": true,
+        "controlType": "text"
       }
     ],
     "dependencies": {
       "usesRouter": false,
       "usesReactQuery": false,
       "usesChakra": true,
-      "usesMSW": false
+      "usesGluestack": false,
+      "usesReactNative": false,
+      "usesEmotion": false,
+      "usesTailwind": false,
+      "usesFramerMotion": true,
+      "usesMSW": false,
+      "usesGlobalState": false,
+      "otherImports": ["@chakra-ui/react", "framer-motion"]
     },
     "suggestions": [
-      "Include variant stories to showcase all button styles",
-      "Add interactive play function to test click behavior"
-    ]
+      "Use 'with-variants' template to showcase all size/variant combinations",
+      "Add Framer Motion decorator for animation testing",
+      "Consider adding interactive tests for click/focus states"
+    ],
+    "sourcePreview": "export const Button = ({ variant = 'solid', size = 'md', ... }) => { ... }"
   },
-  "summary": "Analyzed Button: 2 props, no story",
-  "recommendations": [...]
+  "summary": "Analyzed Button: 4 props, no story",
+  "recommendations": [
+    "Use 'with-variants' template to showcase all size/variant combinations",
+    "Add Framer Motion decorator for animation testing"
+  ]
 }
 ```
+
+---
 
 ### `generate_story`
 
-Generate a Storybook story file for a component. **All options are passed as tool arguments, not in config.**
+Generate a Storybook story file for a component.
 
-**Example 1: Basic story generation (defaults)**
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `componentPath` | `string` | ✅ | — | Path to the component file |
+| `includeVariants` | `boolean` | — | `true` | Add stories showcasing all size/variant combinations |
+| `includeInteractive` | `boolean` | — | `true` | Add play function tests for user interactions |
+| `includeA11y` | `boolean` | — | `false` | Add accessibility test story |
+| `includeResponsive` | `boolean` | — | `false` | Add mobile/tablet/desktop viewport stories |
+| `template` | `string` | — | auto | Template to use (see [Templates](#templates)) |
+| `overwrite` | `boolean` | — | `false` | Replace existing story file |
+| `dryRun` | `boolean` | — | `false` | Preview without writing to disk |
+
+**Examples:**
+
 ```json
+// Basic: generate with defaults (variants + interactive)
 {
-  "tool": "generate_story",
-  "arguments": {
-    "componentPath": "libs/ui/src/button/button.tsx"
-  }
+  "componentPath": "libs/ui/src/button/button.tsx"
+}
+
+// Minimal: just the basic story, no extras
+{
+  "componentPath": "libs/ui/src/button/button.tsx",
+  "includeVariants": false,
+  "includeInteractive": false
+}
+
+// Full coverage: everything including a11y and responsive
+{
+  "componentPath": "libs/ui/src/button/button.tsx",
+  "includeVariants": true,
+  "includeInteractive": true,
+  "includeA11y": true,
+  "includeResponsive": true
+}
+
+// Use a specific template
+{
+  "componentPath": "libs/ui/src/user-list/user-list.tsx",
+  "template": "with-msw"
+}
+
+// Preview what would be generated
+{
+  "componentPath": "libs/ui/src/button/button.tsx",
+  "dryRun": true
+}
+
+// Replace an existing story
+{
+  "componentPath": "libs/ui/src/button/button.tsx",
+  "overwrite": true
 }
 ```
-This uses defaults: `includeVariants: true`, `includeInteractive: true`, `includeA11y: false`, `includeResponsive: false`, `template: "basic"`
-
-**Example 2: Generate with all features enabled**
-```json
-{
-  "tool": "generate_story",
-  "arguments": {
-    "componentPath": "libs/ui/src/card/card.tsx",
-    "includeVariants": true,
-    "includeInteractive": true,
-    "includeA11y": true,
-    "includeResponsive": true,
-    "template": "with-controls"
-  }
-}
-```
-
-**Example 3: Generate with accessibility tests only**
-```json
-{
-  "tool": "generate_story",
-  "arguments": {
-    "componentPath": "libs/ui/src/button/button.tsx",
-    "includeVariants": false,
-    "includeInteractive": false,
-    "includeA11y": true,
-    "includeResponsive": false
-  }
-}
-```
-
-**Example 4: Generate with MSW template (Pro only)**
-```json
-{
-  "tool": "generate_story",
-  "arguments": {
-    "componentPath": "libs/shared/src/UserList.tsx",
-    "template": "with-msw",
-    "includeInteractive": true
-  }
-}
-```
-
-**Example 5: Preview without writing (dry run)**
-```json
-{
-  "tool": "generate_story",
-  "arguments": {
-    "componentPath": "libs/ui/src/button/button.tsx",
-    "dryRun": true,
-    "includeVariants": true,
-    "includeInteractive": true
-  }
-}
-```
-
-**Example 6: Overwrite existing story**
-```json
-{
-  "tool": "generate_story",
-  "arguments": {
-    "componentPath": "libs/ui/src/button/button.tsx",
-    "overwrite": true,
-    "includeVariants": true
-  }
-}
-```
-
-**Available Options:**
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `componentPath` | `string` | **required** | Path to component file relative to project root |
-| `includeVariants` | `boolean` | `true` | Include stories for size/variant props (e.g., `size="sm"`, `variant="primary"`) |
-| `includeInteractive` | `boolean` | `true` | Include interactive test with play function (tests user interactions) |
-| `includeA11y` | `boolean` | `false` | Include accessibility test story (runs a11y checks) |
-| `includeResponsive` | `boolean` | `false` | Include responsive viewport stories (mobile/desktop) |
-| `template` | `string` | `"basic"` | Template to use: `basic`, `with-controls`, `with-variants`, `with-msw`, `with-router`, `page`, `interactive`, `form` (Pro only for non-basic) |
-| `overwrite` | `boolean` | `false` | Overwrite existing story file if it exists |
-| `dryRun` | `boolean` | `false` | Generate story content but don't write to disk |
 
 **Response:**
+
 ```json
 {
   "story": {
-    "content": "import type { Meta, StoryObj } from '@storybook/react'...",
-    "filePath": "libs/ui/src/button/button.stories.tsx"
+    "content": "import type { Meta, StoryObj } from '@storybook/react'\nimport { Button } from './Button'\n\nconst meta: Meta<typeof Button> = {\n  title: 'UI/Button',\n  component: Button,\n  tags: ['autodocs'],\n  ...\n}\n\nexport default meta\ntype Story = StoryObj<typeof Button>\n\nexport const Default: Story = { ... }\nexport const Sizes: Story = { ... }\nexport const Variants: Story = { ... }",
+    "filePath": "libs/ui/src/button/button.stories.tsx",
+    "imports": ["@storybook/react", "./Button"],
+    "stories": ["Default", "Sizes", "Variants", "ClickTest"],
+    "warnings": []
   },
   "written": true,
   "path": "libs/ui/src/button/button.stories.tsx",
@@ -436,332 +541,277 @@ This uses defaults: `includeVariants: true`, `includeInteractive: true`, `includ
 }
 ```
 
-### `validate_story`
+---
 
-Validate an existing story file for best practices, errors, and suggestions.
+### `generate_test`
 
-**Example: Validate a story**
+Generate a Playwright/Vitest test file for a component. **(Pro only)**
+
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `componentPath` | `string` | ✅ | — | Path to the component file |
+| `overwrite` | `boolean` | — | `false` | Replace existing test file |
+| `dryRun` | `boolean` | — | `false` | Preview without writing to disk |
+
+**Examples:**
+
 ```json
+// Generate test for a component
 {
-  "tool": "validate_story",
-  "arguments": {
-    "storyPath": "libs/ui/src/button/button.stories.tsx"
-  }
+  "componentPath": "libs/ui/src/button/button.tsx"
+}
+
+// Preview without writing
+{
+  "componentPath": "libs/ui/src/button/button.tsx",
+  "dryRun": true
+}
+
+// Replace existing test
+{
+  "componentPath": "libs/ui/src/button/button.tsx",
+  "overwrite": true
 }
 ```
 
 **Response:**
+
+```json
+{
+  "test": {
+    "content": "import { test, expect } from '@playwright/experimental-ct-react'\nimport { Button } from './Button'\n\ntest('renders correctly', async ({ mount }) => {\n  const component = await mount(<Button>Click me</Button>)\n  await expect(component).toBeVisible()\n})\n...",
+    "filePath": "libs/ui/src/button/button.test.tsx"
+  },
+  "written": true,
+  "path": "libs/ui/src/button/button.test.tsx",
+  "summary": "Created test at libs/ui/src/button/button.test.tsx"
+}
+```
+
+---
+
+### `generate_docs`
+
+Generate MDX documentation for a component. **(Pro only)**
+
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `componentPath` | `string` | ✅ | — | Path to the component file |
+| `overwrite` | `boolean` | — | `false` | Replace existing docs file |
+| `dryRun` | `boolean` | — | `false` | Preview without writing to disk |
+
+**Examples:**
+
+```json
+// Generate docs for a component
+{
+  "componentPath": "libs/ui/src/button/button.tsx"
+}
+
+// Preview without writing
+{
+  "componentPath": "libs/ui/src/button/button.tsx",
+  "dryRun": true
+}
+```
+
+**Response:**
+
+```json
+{
+  "docs": {
+    "content": "import { Meta, Story, Canvas, ArgsTable } from '@storybook/blocks'\nimport * as ButtonStories from './button.stories'\n\n<Meta of={ButtonStories} />\n\n# Button\n\nA flexible button component with multiple variants and sizes.\n\n## Usage\n\n```tsx\nimport { Button } from '@ui/button'\n\n<Button variant=\"solid\" size=\"md\">Click me</Button>\n```\n\n## Props\n\n<ArgsTable of={ButtonStories} />\n...",
+    "filePath": "libs/ui/src/button/button.mdx"
+  },
+  "written": true,
+  "path": "libs/ui/src/button/button.mdx",
+  "summary": "Created docs at libs/ui/src/button/button.mdx"
+}
+```
+
+---
+
+### `validate_story`
+
+Validate an existing story file for best practices and issues.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `storyPath` | `string` | ✅ | Path to the story file |
+
+**Example:**
+
+```json
+{
+  "storyPath": "libs/ui/src/button/button.stories.tsx"
+}
+```
+
+**Response:**
+
 ```json
 {
   "validation": {
-    "valid": true,
-    "score": 85,
-    "errors": [],
+    "valid": false,
+    "score": 72,
+    "errors": [
+      {
+        "type": "error",
+        "code": "MISSING_META_TITLE",
+        "message": "Story is missing a title in meta",
+        "line": 5,
+        "fix": "Add 'title' property to meta object"
+      }
+    ],
     "warnings": [
-      "Missing accessibility story - consider adding includeA11y: true"
+      {
+        "type": "warning",
+        "code": "NO_AUTODOCS",
+        "message": "Story doesn't have 'autodocs' tag",
+        "line": 8,
+        "fix": "Add tags: ['autodocs'] to meta"
+      }
     ],
     "suggestions": [
-      "Add more variant examples",
-      "Include responsive viewports"
+      {
+        "type": "suggestion",
+        "code": "ADD_PLAY_FUNCTION",
+        "message": "Consider adding interaction tests with play functions",
+        "fix": "Add a story with a play function for testing user interactions"
+      }
     ]
   },
-  "summary": "Story is valid (score: 85/100)"
+  "summary": "Story has 1 errors (score: 72/100)"
 }
 ```
 
-### `get_story_template`
-
-Get a specific story template with placeholders. Useful for understanding template structure.
-
-**Example 1: Get basic template**
-```json
-{
-  "tool": "get_story_template",
-  "arguments": {
-    "template": "basic"
-  }
-}
-```
-
-**Example 2: Get MSW template (Pro only)**
-```json
-{
-  "tool": "get_story_template",
-  "arguments": {
-    "template": "with-msw"
-  }
-}
-```
-
-**Available templates:** `basic`, `with-controls`, `with-variants`, `with-msw`, `with-router`, `page`, `interactive`, `form`
-
-**Response:**
-```json
-{
-  "template": {
-    "name": "basic",
-    "description": "Simple component with minimal setup",
-    "content": "import type { Meta, StoryObj } from '@storybook/react'...",
-    "placeholders": ["ComponentName", "componentPath"]
-  },
-  "usage": "Replace placeholders: ComponentName, componentPath"
-}
-```
-
-### `list_templates`
-
-List all available story templates with descriptions.
-
-**Example: List all templates**
-```json
-{
-  "tool": "list_templates"
-}
-```
-
-**Response:**
-```json
-{
-  "templates": [
-    {
-      "name": "basic",
-      "description": "Simple component with minimal setup",
-      "useCase": "Basic components without complex dependencies",
-      "available": true
-    },
-    {
-      "name": "with-msw",
-      "description": "Components that fetch data",
-      "useCase": "Components using fetch, axios, or React Query",
-      "available": false
-    }
-  ],
-  "count": 8,
-  "tier": "free"
-}
-```
-
-### `get_component_coverage`
-
-Get story coverage statistics for the project.
-
-**Example 1: Get coverage for all libraries**
-```json
-{
-  "tool": "get_component_coverage"
-}
-```
-
-**Example 2: Get coverage for a specific library**
-```json
-{
-  "tool": "get_component_coverage",
-  "arguments": {
-    "library": "ui"
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "total": 25,
-  "withStories": 20,
-  "withoutStories": 5,
-  "coverage": "80%",
-  "byLibrary": {
-    "ui": {
-      "total": 15,
-      "withStories": 12
-    },
-    "shared": {
-      "total": 10,
-      "withStories": 8
-    }
-  },
-  "componentsNeedingStories": [
-    {
-      "name": "Button",
-      "path": "libs/ui/src/button/button.tsx",
-      "library": "ui"
-    }
-  ]
-}
-```
-
-### `suggest_stories`
-
-Get a prioritized list of components that need stories.
-
-**Example 1: Get top 10 suggestions**
-```json
-{
-  "tool": "suggest_stories"
-}
-```
-
-**Example 2: Get top 5 suggestions for a library**
-```json
-{
-  "tool": "suggest_stories",
-  "arguments": {
-    "limit": 5,
-    "library": "ui"
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "suggestions": [
-    {
-      "component": "Button",
-      "path": "libs/ui/src/button/button.tsx",
-      "library": "ui",
-      "command": "generate_story with componentPath: \"libs/ui/src/button/button.tsx\""
-    }
-  ],
-  "total": 5,
-  "showing": 5,
-  "summary": "5 components without stories. Showing top 5."
-}
-```
+---
 
 ### `sync_all`
 
-Manually trigger full sync of all components. Creates missing stories/tests/docs and updates changed ones.
+Sync all components — create missing stories/tests/docs and update changed ones.
 
-**Example 1: Sync everything (defaults)**
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `library` | `string` | — | all | Only sync components in this library |
+| `generateStories` | `boolean` | — | `true` | Generate story files |
+| `generateTests` | `boolean` | — | `true` | Generate test files (Pro only) |
+| `generateDocs` | `boolean` | — | `true` | Generate MDX docs (Pro only) |
+| `updateExisting` | `boolean` | — | `true` | Update files when components change |
+| `dryRun` | `boolean` | — | `false` | Preview without writing to disk |
+
+**Examples:**
+
 ```json
+// Sync everything with defaults
+{}
+
+// Sync only the "ui" library
 {
-  "tool": "sync_all"
+  "library": "ui"
+}
+
+// Only generate stories, no tests or docs
+{
+  "generateStories": true,
+  "generateTests": false,
+  "generateDocs": false
+}
+
+// Only create missing files, don't update existing
+{
+  "updateExisting": false
+}
+
+// Preview what would change
+{
+  "dryRun": true
+}
+
+// Sync only stories for "shared" library, don't update existing
+{
+  "library": "shared",
+  "generateStories": true,
+  "generateTests": false,
+  "generateDocs": false,
+  "updateExisting": false
 }
 ```
-Defaults: `generateStories: true`, `generateTests: true`, `generateDocs: true`, `updateExisting: true`
-
-**Example 2: Sync only stories, skip tests and docs**
-```json
-{
-  "tool": "sync_all",
-  "arguments": {
-    "generateStories": true,
-    "generateTests": false,
-    "generateDocs": false
-  }
-}
-```
-
-**Example 3: Sync only for a specific library**
-```json
-{
-  "tool": "sync_all",
-  "arguments": {
-    "library": "ui",
-    "generateStories": true,
-    "generateTests": false
-  }
-}
-```
-
-**Example 4: Preview sync without writing**
-```json
-{
-  "tool": "sync_all",
-  "arguments": {
-    "dryRun": true
-  }
-}
-```
-
-**Example 5: Only create missing files, don't update existing**
-```json
-{
-  "tool": "sync_all",
-  "arguments": {
-    "updateExisting": false
-  }
-}
-```
-
-**Available Options:**
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `library` | `string` | `undefined` | Filter by library name (e.g., `"ui"`) |
-| `generateStories` | `boolean` | `true` | Generate missing story files |
-| `generateTests` | `boolean` | `true` | Generate missing test files (Pro only) |
-| `generateDocs` | `boolean` | `true` | Generate missing MDX docs (Pro only) |
-| `updateExisting` | `boolean` | `true` | Update existing files if component changed |
-| `dryRun` | `boolean` | `false` | Preview what would be done without writing files |
 
 **Response:**
+
 ```json
 {
-  "scanned": 25,
+  "scanned": 24,
   "created": {
-    "stories": 5,
-    "tests": 3,
-    "docs": 2
+    "stories": 8,
+    "tests": 8,
+    "docs": 8
   },
   "updated": {
-    "stories": 2,
-    "tests": 1,
-    "docs": 0
+    "stories": 3,
+    "tests": 2,
+    "docs": 3
   },
-  "summary": "Synced 25 components: Created 5 stories, 3 tests, 2 docs. Updated 3 files."
+  "skipped": {
+    "stories": 13,
+    "tests": 14,
+    "docs": 13
+  },
+  "errors": [],
+  "summary": "Synced 24 components: Created 8 stories, 8 tests, 8 docs. Updated 8 files."
 }
 ```
+
+---
 
 ### `sync_component`
 
-Sync a single component - create or update its story, test, and docs files.
+Sync a single component's story, test, and docs.
 
-**Example 1: Sync everything for a component**
-```json
-{
-  "tool": "sync_component",
-  "arguments": {
-    "componentPath": "libs/ui/src/button/button.tsx"
-  }
-```
-Defaults: `generateStories: true`, `generateTests: true`, `generateDocs: true`
+**Parameters:**
 
-**Example 2: Sync only story, skip test and docs**
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `componentPath` | `string` | ✅ | — | Path to the component file |
+| `generateStories` | `boolean` | — | `true` | Generate story file |
+| `generateTests` | `boolean` | — | `true` | Generate test file (Pro only) |
+| `generateDocs` | `boolean` | — | `true` | Generate MDX docs (Pro only) |
+| `dryRun` | `boolean` | — | `false` | Preview without writing to disk |
+
+**Examples:**
+
 ```json
+// Sync everything for one component
 {
-  "tool": "sync_component",
-  "arguments": {
-    "componentPath": "libs/ui/src/button/button.tsx",
-    "generateStories": true,
-    "generateTests": false,
-    "generateDocs": false
-  }
+  "componentPath": "libs/ui/src/button/button.tsx"
+}
+
+// Only sync the story, not tests or docs
+{
+  "componentPath": "libs/ui/src/button/button.tsx",
+  "generateStories": true,
+  "generateTests": false,
+  "generateDocs": false
+}
+
+// Preview what would change
+{
+  "componentPath": "libs/ui/src/button/button.tsx",
+  "dryRun": true
 }
 ```
-
-**Example 3: Preview sync without writing**
-```json
-{
-  "tool": "sync_component",
-  "arguments": {
-    "componentPath": "libs/ui/src/button/button.tsx",
-    "dryRun": true
-  }
-}
-```
-
-**Available Options:**
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `componentPath` | `string` | **required** | Path to component file relative to project root |
-| `generateStories` | `boolean` | `true` | Generate story file |
-| `generateTests` | `boolean` | `true` | Generate test file (Pro only) |
-| `generateDocs` | `boolean` | `true` | Generate MDX docs (Pro only) |
-| `dryRun` | `boolean` | `false` | Preview without writing |
 
 **Response:**
+
 ```json
 {
   "result": {
@@ -771,186 +821,368 @@ Defaults: `generateStories: true`, `generateTests: true`, `generateDocs: true`
       "path": "libs/ui/src/button/button.stories.tsx"
     },
     "test": {
-      "action": "skipped",
-      "path": null
+      "action": "created",
+      "path": "libs/ui/src/button/button.test.tsx"
     },
     "docs": {
-      "action": "created",
-      "path": "libs/ui/src/button/button.mdx"
+      "action": "skipped",
+      "path": "libs/ui/src/button/button.mdx",
+      "reason": "Already exists and unchanged"
     }
   },
-  "summary": "Button: story: created, docs: created"
+  "summary": "Button: story: created, test: created"
 }
 ```
 
-### `generate_test`
+---
 
-Generate a Playwright/Vitest test file for a component. **Pro feature.**
+### `get_story_template`
 
-**Example 1: Generate test**
+Get a specific template by name.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `template` | `string` | ✅ | Template name (see [Templates](#templates)) |
+
+**Example:**
+
 ```json
 {
-  "tool": "generate_test",
-  "arguments": {
-    "componentPath": "libs/ui/src/button/button.tsx"
-  }
+  "template": "with-msw"
 }
 ```
-
-**Example 2: Preview test without writing**
-```json
-{
-  "tool": "generate_test",
-  "arguments": {
-    "componentPath": "libs/ui/src/button/button.tsx",
-    "dryRun": true
-  }
-}
-```
-
-**Example 3: Overwrite existing test**
-```json
-{
-  "tool": "generate_test",
-  "arguments": {
-    "componentPath": "libs/ui/src/button/button.tsx",
-    "overwrite": true
-  }
-}
-```
-
-**Available Options:**
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `componentPath` | `string` | **required** | Path to component file relative to project root |
-| `overwrite` | `boolean` | `false` | Overwrite existing test file if it exists |
-| `dryRun` | `boolean` | `false` | Preview without writing |
 
 **Response:**
+
 ```json
 {
-  "test": {
-    "content": "import { test, expect } from '@playwright/test'...",
-    "filePath": "libs/ui/src/button/button.test.tsx"
+  "template": {
+    "name": "with-msw",
+    "description": "Story with MSW API mocking",
+    "useCase": "Components that fetch data and need mocked API responses",
+    "content": "import type { Meta, StoryObj } from '@storybook/react'\nimport { http, HttpResponse } from 'msw'\nimport { {{ComponentName}} } from './{{ComponentName}}'\n\nconst meta: Meta<typeof {{ComponentName}}> = {\n  title: 'Components/{{ComponentName}}',\n  component: {{ComponentName}},\n  tags: ['autodocs'],\n}\n\nexport default meta\ntype Story = StoryObj<typeof {{ComponentName}}>\n\nexport const Default: Story = {\n  parameters: {\n    msw: {\n      handlers: [\n        http.get('/api/data', () => {\n          return HttpResponse.json({\n            items: [\n              { id: 1, name: 'Item 1' },\n            ],\n          })\n        }),\n      ],\n    },\n  },\n}\n...",
+    "placeholders": ["ComponentName", "component-name"]
   },
-  "written": true,
-  "path": "libs/ui/src/button/button.test.tsx",
-  "summary": "Created test at libs/ui/src/button/button.test.tsx"
+  "usage": "Replace placeholders: ComponentName, component-name"
 }
 ```
 
-### `generate_docs`
+---
 
-Generate MDX documentation for a component. **Pro feature.**
+### `list_templates`
 
-**Example 1: Generate docs**
+List all available story templates.
+
+**Parameters:** None
+
+**Example:**
+
 ```json
-{
-  "tool": "generate_docs",
-  "arguments": {
-    "componentPath": "libs/ui/src/button/button.tsx"
-  }
-}
+{}
 ```
-
-**Example 2: Preview docs without writing**
-```json
-{
-  "tool": "generate_docs",
-  "arguments": {
-    "componentPath": "libs/ui/src/button/button.tsx",
-    "dryRun": true
-  }
-}
-```
-
-**Example 3: Overwrite existing docs**
-```json
-{
-  "tool": "generate_docs",
-  "arguments": {
-    "componentPath": "libs/ui/src/button/button.tsx",
-    "overwrite": true
-  }
-}
-```
-
-**Available Options:**
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `componentPath` | `string` | **required** | Path to component file relative to project root |
-| `overwrite` | `boolean` | `false` | Overwrite existing docs file if it exists |
-| `dryRun` | `boolean` | `false` | Preview without writing |
 
 **Response:**
+
 ```json
 {
-  "docs": {
-    "content": "import { Meta } from '@storybook/blocks'...",
-    "filePath": "libs/ui/src/button/button.mdx"
-  },
-  "written": true,
-  "path": "libs/ui/src/button/button.mdx",
-  "summary": "Created docs at libs/ui/src/button/button.mdx"
+  "templates": [
+    {
+      "name": "basic",
+      "description": "Simple story with basic args",
+      "useCase": "Quick component documentation with minimal setup",
+      "available": true
+    },
+    {
+      "name": "with-controls",
+      "description": "Story with full argTypes controls (Pro Only)",
+      "useCase": "Interactive component exploration with all props exposed",
+      "available": false
+    },
+    {
+      "name": "with-variants",
+      "description": "Story showcasing all variants and sizes (Pro Only)",
+      "useCase": "Design system documentation showing all visual options",
+      "available": false
+    }
+  ],
+  "count": 8,
+  "tier": "free"
 }
 ```
+
+---
+
+### `get_component_coverage`
+
+Get story coverage statistics for the project.
+
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `library` | `string` | — | all | Filter by library name |
+
+**Examples:**
+
+```json
+// Coverage for entire project
+{}
+
+// Coverage for "ui" library only
+{
+  "library": "ui"
+}
+```
+
+**Response:**
+
+```json
+{
+  "total": 24,
+  "withStories": 16,
+  "withoutStories": 8,
+  "coverage": "67%",
+  "byLibrary": {
+    "ui": {
+      "total": 15,
+      "withStories": 12
+    },
+    "shared": {
+      "total": 9,
+      "withStories": 4
+    }
+  },
+  "componentsNeedingStories": [
+    {
+      "name": "Tooltip",
+      "path": "libs/ui/src/tooltip/tooltip.tsx",
+      "library": "ui"
+    },
+    {
+      "name": "DataTable",
+      "path": "libs/shared/src/data-table/data-table.tsx",
+      "library": "shared"
+    }
+  ]
+}
+```
+
+---
+
+### `suggest_stories`
+
+Get a prioritized list of components that need stories.
+
+**Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `limit` | `number` | — | `10` | Max number of suggestions |
+| `library` | `string` | — | all | Filter by library name |
+
+**Examples:**
+
+```json
+// Get top 10 suggestions
+{}
+
+// Get top 5 suggestions from "ui" library
+{
+  "limit": 5,
+  "library": "ui"
+}
+```
+
+**Response:**
+
+```json
+{
+  "suggestions": [
+    {
+      "component": "Button",
+      "path": "libs/ui/src/button/button.tsx",
+      "library": "ui",
+      "command": "generate_story with componentPath: \"libs/ui/src/button/button.tsx\""
+    },
+    {
+      "component": "Card",
+      "path": "libs/ui/src/card/card.tsx",
+      "library": "ui",
+      "command": "generate_story with componentPath: \"libs/ui/src/card/card.tsx\""
+    }
+  ],
+  "total": 8,
+  "showing": 2,
+  "summary": "8 components without stories. Showing top 2."
+}
+```
+
+---
 
 ## Templates
 
-| Template        | Use Case                                  | Tier   |
-| --------------- | ----------------------------------------- | ------ |
-| `basic`         | Simple component with minimal setup       | Free   |
-| `with-controls` | Full argTypes for interactive exploration  | Pro    |
-| `with-variants` | Showcase all sizes/variants               | Pro    |
-| `with-msw`      | Components that fetch data                | Pro    |
-| `with-router`   | Components using React Router             | Pro    |
-| `page`          | Full-page components                      | Pro    |
-| `interactive`   | Components with user interactions         | Pro    |
-| `form`          | Form components with validation           | Pro    |
+Templates are pre-built story structures for different use cases. Use them with the `template` parameter in `generate_story`.
 
-## Configuration Reference
+| Template | Use Case | Example |
+|----------|----------|---------|
+| `basic` | Quick documentation, minimal setup | Simple presentational components |
+| `with-controls` | Interactive exploration with all props | Design system components |
+| `with-variants` | Showcase all sizes/variants | Buttons, badges, avatars |
+| `with-msw` | Components that fetch data | User lists, dashboards |
+| `with-router` | Components using React Router | Navigation, breadcrumbs |
+| `page` | Full-page components | Landing pages, dashboards |
+| `interactive` | Components with user interactions | Forms, modals, dropdowns |
+| `form` | Form components with validation | Login forms, settings panels |
 
-```typescript
-interface StorybookMCPConfig {
-  // Project root (auto-detected)
-  rootDir: string
+### Template Examples
 
-  // UI framework
-  framework: 'chakra' | 'shadcn' | 'tamagui' | 'vanilla' | 'custom'
+**`basic`** — Minimal setup:
 
-  // Component libraries
-  libraries: Array<{
-    name: string // Library identifier
-    path: string // Path relative to rootDir
-    storyTitlePrefix: string // Storybook title prefix
-    decorators?: string[] // Default decorators
-    importAlias?: string // Import path alias
-  }>
+```tsx
+import type { Meta, StoryObj } from '@storybook/react'
+import { Button } from './Button'
 
-  // File patterns
-  storyFilePattern: string // Default: **/*.stories.{ts,tsx}
-  componentPatterns: string[] // Glob patterns for components
-  excludePatterns: string[] // Directories to exclude
+const meta: Meta<typeof Button> = {
+  title: 'Components/Button',
+  component: Button,
+  tags: ['autodocs'],
+}
 
-  // Storybook version
-  storybookVersion: 7 | 8 // Default: 8
+export default meta
+type Story = StoryObj<typeof Button>
 
-  // License key (optional, can use env var instead)
-  licenseKey?: string
+export const Default: Story = {
+  args: {
+    children: 'Button content',
+  },
 }
 ```
 
+**`with-variants`** — Showcase all combinations:
+
+```tsx
+export const Sizes: Story = {
+  render: () => (
+    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+      <Button size="sm">Small</Button>
+      <Button size="md">Medium</Button>
+      <Button size="lg">Large</Button>
+    </div>
+  ),
+}
+
+export const AllVariants: Story = {
+  render: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {(['solid', 'outline', 'ghost'] as const).map((variant) => (
+        <div key={variant} style={{ display: 'flex', gap: '1rem' }}>
+          <Button variant={variant} size="sm">Small</Button>
+          <Button variant={variant} size="md">Medium</Button>
+          <Button variant={variant} size="lg">Large</Button>
+        </div>
+      ))}
+    </div>
+  ),
+}
+```
+
+**`with-msw`** — Mock API responses:
+
+```tsx
+import { http, HttpResponse } from 'msw'
+
+export const Default: Story = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/users', () => {
+          return HttpResponse.json({
+            users: [
+              { id: 1, name: 'Alice' },
+              { id: 2, name: 'Bob' },
+            ],
+          })
+        }),
+      ],
+    },
+  },
+}
+
+export const Loading: Story = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/users', async () => {
+          await new Promise((r) => setTimeout(r, 999999))
+          return HttpResponse.json({})
+        }),
+      ],
+    },
+  },
+}
+
+export const Error: Story = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/users', () => {
+          return HttpResponse.json({ error: 'Failed' }, { status: 500 })
+        }),
+      ],
+    },
+  },
+}
+```
+
+**`interactive`** — Play function tests:
+
+```tsx
+import { expect, userEvent, within } from '@storybook/test'
+
+export const ClickTest: Story = {
+  args: { children: 'Click me' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const button = canvas.getByText(/click me/i)
+
+    await expect(button).toBeInTheDocument()
+    await userEvent.click(button)
+    // Add assertions for post-click state
+  },
+}
+
+export const KeyboardNavigation: Story = {
+  args: { children: 'Focus me' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const button = canvas.getByText(/focus me/i)
+
+    await userEvent.tab()
+    await expect(button).toHaveFocus()
+    await userEvent.keyboard('{Enter}')
+  },
+}
+```
+
+---
+
 ## Resources
 
-The MCP also provides resources:
+The MCP provides these read-only resources:
 
-- `storybook://libraries` — Configured library information
-- `storybook://patterns` — Common story patterns and best practices
-- `storybook://config` — Current MCP configuration
+| Resource URI | Description |
+|--------------|-------------|
+| `storybook://libraries` | Configured library information |
+| `storybook://patterns` | Common story patterns and best practices |
+| `storybook://config` | Current MCP configuration |
+
+---
 
 ## Programmatic Usage
+
+You can also use the MCP server programmatically:
 
 ```typescript
 import { createStorybookMCPServer } from 'forgekit-storybook-mcp'
@@ -958,16 +1190,30 @@ import { createStorybookMCPServer } from 'forgekit-storybook-mcp'
 const server = createStorybookMCPServer({
   rootDir: process.cwd(),
   framework: 'chakra',
-  libraries: [{ name: 'ui', path: 'src/components', storyTitlePrefix: 'UI' }]
+  libraries: [
+    {
+      name: 'ui',
+      path: 'src/components',
+      storyTitlePrefix: 'UI',
+      importAlias: '@ui',
+    },
+  ],
+  storybookVersion: 8,
 })
+
+// Server is now ready to handle MCP requests
 ```
 
-## Related
+---
+
+## Related Projects
 
 - [forgekit-chakra-mcp](https://github.com/effinrich/chakra-mcp) — Chakra UI + Figma sync MCP
 - [@storybook/addon-mcp](https://github.com/storybookjs/mcp) — Official Storybook MCP (reads stories)
 
 This MCP focuses on **generating** stories, while the official one focuses on **reading** existing Storybook data. They complement each other.
+
+---
 
 ## License
 
