@@ -19,6 +19,7 @@ import type { StorybookMCPConfig } from './types.js'
 import { DEFAULT_CONFIG } from './types.js'
 import { initializeComponents } from './utils/initializer.js'
 import { validateLicenseAsync } from './utils/license.js'
+import { runSetup } from './utils/setup.js'
 
 // Parse CLI arguments
 function parseArgs(): {
@@ -30,8 +31,19 @@ function parseArgs(): {
   noDocs: boolean
   noUpdate: boolean
   help: boolean
+  setup: boolean
+  force: boolean
+  libName?: string
 } {
   const args = process.argv.slice(2)
+  
+  // Parse --lib=<name> argument
+  let libName: string | undefined
+  const libArg = args.find(arg => arg.startsWith('--lib='))
+  if (libArg) {
+    libName = libArg.split('=')[1]
+  }
+
   return {
     skipInit: args.includes('--skip-init'),
     dryRun: args.includes('--dry-run'),
@@ -41,6 +53,9 @@ function parseArgs(): {
     noDocs: args.includes('--no-docs'),
     noUpdate: args.includes('--no-update'),
     help: args.includes('--help') || args.includes('-h'),
+    setup: args.includes('--setup'),
+    force: args.includes('--force'),
+    libName,
   }
 }
 
@@ -51,6 +66,13 @@ forgekit-storybook-mcp - Auto-generate Storybook stories, tests, and docs
 USAGE:
   npx forgekit-storybook-mcp [options]
 
+SETUP (run first for new projects):
+  --setup         Create .storybook/ config and add npm scripts
+                  Auto-detects: Nx monorepo vs standard, UI framework
+  --setup --dry-run   Preview what would be created
+  --setup --force     Overwrite existing .storybook files
+  --setup --lib=name  Specify Nx library name (for monorepos)
+
 OPTIONS:
   --init-only     Generate files and exit (no MCP server)
   --dry-run       Show what would be created without writing files
@@ -59,6 +81,7 @@ OPTIONS:
   --no-tests      Don't generate test files  
   --no-docs       Don't generate MDX docs
   --no-update     Don't update existing files
+  --force         Overwrite existing files
   -h, --help      Show this help message
 
 CONFIGURATION:
@@ -91,6 +114,16 @@ async function main() {
 
   if (args.help) {
     showHelp()
+    process.exit(0)
+  }
+
+  // Handle --setup command
+  if (args.setup) {
+    await runSetup(cwd, {
+      dryRun: args.dryRun,
+      force: args.force,
+      libName: args.libName,
+    })
     process.exit(0)
   }
 
