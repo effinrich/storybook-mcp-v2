@@ -61,13 +61,16 @@ Perfect for individuals and trying out the tool.
 - ❌ Test generation (`generate_test`)
 - ❌ Docs generation (`generate_docs`)
 
-### Pro Tier
+### Pro Tier — $49 (Lifetime License)
 For professional teams requiring complete coverage.
 - ✅ **Unlimited** sync
 - ✅ **All** templates (Interactive, MSW, Router, etc.)
 - ✅ **Test generation** (Playwright/Vitest)
 - ✅ **Docs generation** (MDX)
 - ✅ Priority support
+- ✅ Lifetime updates — no subscription
+
+**[👉 Get Pro License](https://forgekit.lemonsqueezy.com/checkout/buy/69feb0fb-a059-4e37-9e22-fafa1d168348)**
 
 ### Activation
 
