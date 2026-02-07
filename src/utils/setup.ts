@@ -440,27 +440,28 @@ interface Dependencies {
 function getDependencies(config: SetupConfig): Dependencies {
   const { framework } = config
 
+  // Storybook 10.x compatible versions
   const dev: string[] = [
-    'storybook',
-    '@storybook/react',
-    '@storybook/addon-essentials',
-    '@storybook/addon-interactions',
-    '@storybook/addon-a11y',
-    '@storybook/blocks',
-    '@storybook/testing-library',
-    '@storybook/test-runner',
+    'storybook@^10.0.0',
+    '@storybook/react@^10.0.0',
+    '@storybook/addon-essentials@^10.0.0',
+    '@storybook/addon-interactions@^10.0.0',
+    '@storybook/addon-a11y@^10.0.0',
+    '@storybook/blocks@^10.0.0',
+    '@storybook/test@^10.0.0',
+    '@storybook/test-runner@^0.21.0',
   ]
 
   // Add framework-specific bundler
   if (framework === 'tamagui') {
-    dev.push('@storybook/react-webpack5')
+    dev.push('@storybook/react-webpack5@^10.0.0')
   } else {
-    dev.push('@storybook/react-vite')
+    dev.push('@storybook/react-vite@^10.0.0')
   }
 
   // Add Nx-specific if needed
   if (config.projectType === 'nx') {
-    dev.push('@nx/storybook')
+    dev.push('@nx/storybook@latest')
   }
 
   const prod: string[] = []
