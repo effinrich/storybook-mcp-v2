@@ -70,7 +70,7 @@ For professional teams requiring complete coverage.
 - ✅ Priority support
 - ✅ Lifetime updates — no subscription
 
-**[👉 Get Pro License](coming soon - email forgekit@pm.me)**
+**[👉 Get Pro License](https://buy.polar.sh/polar_cl_Tnd3ryKUJpYPnXF0kBW1KFHQnoLlxAq2cz9GL3Et0dV)**
 
 ### Activation
 

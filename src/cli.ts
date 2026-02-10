@@ -101,7 +101,7 @@ LICENSE:
   Free tier: 5 components, basic stories only
   Pro ($49): Unlimited components, tests, docs, all templates
   
-  Get Pro: coming soon - email forgekit@pm.me
+  Get Pro: https://polar.sh/forgekit
 
 MORE INFO:
   https://npmjs.com/package/forgekit-storybook-mcp

@@ -1,12 +1,14 @@
 /**
  * License Manager
- * Handles license validation and feature gating via LemonSqueezy API
+ * Handles license validation and feature gating via Polar.sh API
  */
 
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import type { StorybookMCPConfig } from '../types.js'
+
+const POLAR_ORG_ID = process.env.POLAR_ORG_ID || 'c39241cb-629a-4beb-8ec8-31820430d5fd'
 
 export type Feature = 
   | 'basic_stories'
@@ -62,30 +64,44 @@ function writeCache(cache: CachedLicense): void {
 }
 
 /**
- * Validate license key via LemonSqueezy API
+ * Validate license key via Polar.sh API
+ * Uses the customer-portal endpoint (no auth token required)
  */
-async function validateWithLemonSqueezy(key: string): Promise<boolean> {
+async function validateWithPolar(key: string): Promise<boolean> {
   try {
-    const response = await fetch('https://api.lemonsqueezy.com/v1/licenses/validate', {
+    const response = await fetch('https://api.polar.sh/v1/customer-portal/license-keys/validate', {
       method: 'POST',
       headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
-      body: `license_key=${encodeURIComponent(key)}`,
+      body: JSON.stringify({
+        key,
+        organization_id: POLAR_ORG_ID,
+      }),
     })
 
     if (!response.ok) {
       return false
     }
 
-    const data = await response.json() as { valid?: boolean; license_key?: { status?: string } }
-    
-    // Check if valid and not expired/disabled
-    if (data.valid && data.license_key?.status === 'active') {
+    const data = await response.json() as {
+      id?: string
+      status?: string
+      expires_at?: string | null
+    }
+
+    // Check if key exists and is in granted status
+    if (data.id && data.status === 'granted') {
+      // Check expiration if set
+      if (data.expires_at) {
+        const expiresAt = new Date(data.expires_at)
+        if (expiresAt < new Date()) {
+          return false
+        }
+      }
       return true
     }
-    
+
     return false
   } catch (error) {
     console.error('[storybook-mcp] License validation failed:', error)
@@ -96,8 +112,8 @@ async function validateWithLemonSqueezy(key: string): Promise<boolean> {
 /**
  * Validate license key and return status
  * 
- * Supports LemonSqueezy license keys (UUID format)
- * Validates via LemonSqueezy API with local caching
+ * Supports Polar.sh license keys (UUID format)
+ * Validates via Polar API with local caching
  */
 export function validateLicense(config: StorybookMCPConfig): LicenseStatus {
   const key = config.licenseKey || process.env.STORYBOOK_MCP_LICENSE
@@ -162,8 +178,8 @@ export async function validateLicenseAsync(config: StorybookMCPConfig): Promise<
     }
   }
 
-  // Validate with LemonSqueezy
-  const isValid = await validateWithLemonSqueezy(key)
+  // Validate with Polar
+  const isValid = await validateWithPolar(key)
   
   // Cache the result
   writeCache({
@@ -215,7 +231,7 @@ export function requireFeature(feature: Feature, status: LicenseStatus): void {
     throw new Error(
       `Feature '${feature}' requires a Pro license.\n` +
       `Please add a valid license key to your config or environment variable STORYBOOK_MCP_LICENSE.\n` +
-      `Get your license at: coming soon - email hello@forgekit.dev`
+      `Get your license at: https://polar.sh/forgekit`
     )
   }
 }
