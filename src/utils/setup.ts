@@ -449,7 +449,7 @@ function getDependencies(config: SetupConfig): Dependencies {
     '@storybook/addon-a11y@^10.0.0',
     '@storybook/blocks@^10.0.0',
     '@storybook/test@^10.0.0',
-    '@storybook/test-runner@^0.21.0',
+    '@storybook/test-runner@^0.24.0',
   ]
 
   // Add framework-specific bundler
