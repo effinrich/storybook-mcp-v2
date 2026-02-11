@@ -132,7 +132,7 @@ function buildImports(
   if ((options.includeInteractive || options.includeA11y) && 
       framework !== 'react-native' && 
       !analysis.dependencies.usesReactNative) {
-    imports.push(`import { expect, userEvent, within } from '@storybook/test'`)
+    imports.push(`import { expect, userEvent, within } from 'storybook/test'`)
   }
 
   // Add component import
@@ -166,7 +166,7 @@ function buildImports(
     
     // Remove web-only imports that might have been added by default
     const webImports = [
-      `import { expect, userEvent, within } from '@storybook/test'`,
+      `import { expect, userEvent, within } from 'storybook/test'`,
       `import { withRouter } from 'storybook-addon-remix-react-router'`
     ]
     

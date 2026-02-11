@@ -170,11 +170,9 @@ export function findNxLibName(rootDir: string): string | undefined {
 function generateMainTs(config: SetupConfig): string {
   const { projectType, framework } = config
 
-  const addons = [
-    '@storybook/addon-essentials',
-    '@storybook/addon-interactions',
-    '@storybook/addon-a11y',
-  ]
+  // In Storybook 10, essentials/interactions/a11y are bundled into the main
+  // `storybook` package — no separate addon packages needed in the config.
+  const addons: string[] = []
 
   // Framework-specific stories glob
   let storiesGlob: string[]
@@ -440,15 +438,12 @@ interface Dependencies {
 function getDependencies(config: SetupConfig): Dependencies {
   const { framework } = config
 
-  // Storybook 10.x compatible versions
+  // Storybook 10.x — addons (essentials, interactions, a11y, blocks) are now
+  // bundled into the main `storybook` package. Only install what still exists as
+  // separate packages at v10.
   const dev: string[] = [
     'storybook@^10.0.0',
     '@storybook/react@^10.0.0',
-    '@storybook/addon-essentials@^10.0.0',
-    '@storybook/addon-interactions@^10.0.0',
-    '@storybook/addon-a11y@^10.0.0',
-    '@storybook/blocks@^10.0.0',
-    '@storybook/test@^10.0.0',
     '@storybook/test-runner@^0.24.0',
   ]
 

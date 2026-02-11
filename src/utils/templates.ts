@@ -417,7 +417,7 @@ export const Desktop: Story = {
     useCase: 'Components with user interactions that need testing',
     placeholders: ['ComponentName', 'component-name'],
     content: `import type { Meta, StoryObj } from '@storybook/react'
-import { expect, userEvent, within } from '@storybook/test'
+import { expect, userEvent, within } from 'storybook/test'
 import { {{ComponentName}} } from './{{ComponentName}}'
 
 const meta: Meta<typeof {{ComponentName}}> = {
@@ -512,7 +512,7 @@ export const HoverTest: Story = {
     useCase: 'Form components with multiple input states and validation',
     placeholders: ['FormName', 'form-name'],
     content: `import type { Meta, StoryObj } from '@storybook/react'
-import { expect, userEvent, within } from '@storybook/test'
+import { expect, userEvent, within } from 'storybook/test'
 import { {{FormName}} } from './{{FormName}}'
 
 const meta: Meta<typeof {{FormName}}> = {

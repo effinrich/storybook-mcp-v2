@@ -39,7 +39,7 @@ description: Documentation for the ${name} component
 ---
 
 import { ${name} } from '${importPath}'
-import { Canvas, Meta, Story, Controls, ArgTypes } from '@storybook/blocks'
+import { Canvas, Meta, Story, Controls, ArgTypes } from 'storybook/blocks'
 import * as ${name}Stories from './${path.basename(analysis.filePath, path.extname(analysis.filePath))}.stories'
 
 <Meta of={${name}Stories} />
