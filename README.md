@@ -52,11 +52,17 @@ This scaffolds the `.storybook/` config directory, installs core packages, and a
 
 ### Required Packages
 
-These should already be in your project if you're using React:
-
 - `react` ≥ 18
 - `react-dom` ≥ 18
-- `@storybook/react` ≥ 7
+- `storybook` ≥ 10
+- `@storybook/react` ≥ 10
+- `@storybook/react-vite` ≥ 10 (or `@storybook/react-webpack5` if using Webpack)
+
+Install the core Storybook packages:
+
+```bash
+npm i -D storybook @storybook/react @storybook/react-vite
+```
 
 ### Recommended Addons
 
