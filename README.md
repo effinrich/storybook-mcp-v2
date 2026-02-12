@@ -1282,6 +1282,12 @@ const server = createStorybookMCPServer({
 
 ---
 
+## Roadmap
+
+See [ROADMAP.md](./ROADMAP.md) for what's coming next — migration assistant, watch mode, Figma integration, and more.
+
+---
+
 ## Related Projects
 
 - [forgekit-figma-mcp](https://github.com/effinrich/forgekit-figma-mcp) — Figma design tokens → Chakra/Tailwind/Shadcn sync MCP
