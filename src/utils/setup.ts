@@ -675,11 +675,23 @@ export async function runSetup(
   const legacyPreviewExists = fs.existsSync(legacyPreviewPath)
 
   if (legacyPreviewExists && !previewTsxExists) {
-    // preview.ts exists — check if it contains JSX and rename to .tsx
-    const content = fs.readFileSync(legacyPreviewPath, 'utf-8')
+    // preview.ts exists — check content
+    const content = fs.readFileSync(legacyPreviewPath, 'utf-8').trim()
     const hasJsx = /<\w+[\s/>]/.test(content) || content.includes('JSX')
+    const isEmpty = content.length === 0
+    const isMinimal = content.length < 50 // Nearly empty / boilerplate only
 
-    if (hasJsx || force) {
+    if (isEmpty || isMinimal) {
+      // Empty or minimal — replace with generated preview.tsx
+      const previewContent = generatePreviewTs(framework)
+      if (!dryRun) {
+        fs.unlinkSync(legacyPreviewPath)
+        fs.writeFileSync(previewTsxPath, previewContent)
+      }
+      result.filesCreated.push('.storybook/preview.tsx')
+      console.log(`  📄 Replaced empty .storybook/preview.ts with preview.tsx`)
+    } else if (hasJsx) {
+      // Has JSX content — just rename to .tsx
       if (!dryRun) {
         fs.renameSync(legacyPreviewPath, previewTsxPath)
       }
@@ -697,7 +709,7 @@ export async function runSetup(
       console.log(`  📄 Replaced .storybook/preview.ts with preview.tsx`)
     } else {
       console.log(
-        `  ⏭️  Skipped .storybook/preview.ts (already exists, use --force to overwrite)`
+        `  ⚠️  .storybook/preview.ts should be preview.tsx (decorators use JSX). Use --force to replace.`
       )
     }
   } else if (!previewTsxExists && !legacyPreviewExists) {

@@ -303,7 +303,7 @@ async function autoDetectConfig(rootDir: string): Promise<StorybookMCPConfig> {
           const hasProjectJson = fs.existsSync(path.join(entryPath, 'project.json'))
 
           if (fs.existsSync(srcPath) && hasProjectJson) {
-            const relPath = path.relative(rootDir, srcPath)
+            const relPath = path.relative(rootDir, entryPath)
             const libRelPath = path.relative(rootDir, entryPath)
             // Build a readable name from the path: libs/shared/ui → shared-ui
             const nameParts = path.relative(path.join(rootDir, base), entryPath).split(path.sep)
