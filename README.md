@@ -9,6 +9,7 @@ A **Model Context Protocol (MCP) server** for Storybook story generation, compon
 ## Table of Contents
 
 - [Quick Start](#quick-start)
+- [Prerequisites](#prerequisites)
 - [Key Feature: Auto-Sync on Startup](#key-feature-auto-sync-on-startup)
 - [License & Pricing](#license--pricing)
 - [Installation](#installation)
@@ -32,6 +33,43 @@ npm install forgekit-storybook-mcp
 
 # 3. That's it! The MCP will auto-detect your components and framework
 ```
+
+---
+
+## Prerequisites
+
+Before installing, make sure your project has Storybook and its core dependencies set up.
+
+### Storybook
+
+If you don't have Storybook yet:
+
+```bash
+npx storybook@latest init
+```
+
+This scaffolds the `.storybook/` config directory, installs core packages, and adds example stories. **Minimum supported version: Storybook 7.** Version 8+ recommended.
+
+### Required Packages
+
+These should already be in your project if you're using React:
+
+- `react` ≥ 18
+- `react-dom` ≥ 18
+- `@storybook/react` ≥ 7
+
+### Recommended Addons
+
+Some templates and features work best with these addons installed:
+
+| Addon | Used By | Install |
+|-------|---------|---------|
+| `@storybook/test` | Interactive templates, play functions | `npm i -D @storybook/test` |
+| `@storybook/addon-a11y` | Accessibility story generation | `npm i -D @storybook/addon-a11y` |
+| `msw` + `msw-storybook-addon` | `with-msw` template | `npm i -D msw msw-storybook-addon` |
+| `@storybook/addon-interactions` | Interaction testing panel | `npm i -D @storybook/addon-interactions` |
+
+You don't need all of these upfront — the MCP will work without them and will suggest what to install when a template requires a missing dependency.
 
 ---
 
