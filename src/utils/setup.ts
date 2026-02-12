@@ -520,6 +520,69 @@ export async function runSetup(
   }
   console.log('')
 
+  // Nx monorepos: guide user to use Nx's Storybook generator instead of manual scaffolding
+  if (projectType === 'nx') {
+    const targetLib = nxLibName || '<project-name>'
+    
+    // Check if @nx/storybook is installed
+    const nxStorybookInstalled = fs.existsSync(path.join(rootDir, 'node_modules', '@nx', 'storybook'))
+    
+    // Check if the library already has Storybook configured via Nx
+    const libStorybookDir = nxLibName
+      ? path.join(rootDir, 'libs', nxLibName, '.storybook')
+      : null
+    const nxStorybookConfigured = libStorybookDir && fs.existsSync(libStorybookDir)
+
+    if (nxStorybookConfigured) {
+      console.log(`  ✅ Storybook already configured for ${targetLib} via Nx`)
+      console.log(`     Config: libs/${nxLibName}/.storybook/`)
+      console.log('')
+    } else {
+      console.log('  📋 Nx monorepo detected — use the Nx Storybook generator for proper setup:\n')
+      
+      if (!nxStorybookInstalled) {
+        console.log(`  1. Install @nx/storybook:`)
+        console.log(`     npm install -D @nx/storybook@latest`)
+        console.log('')
+        console.log(`  2. Generate Storybook configuration:`)
+      } else {
+        console.log(`  1. Generate Storybook configuration:`)
+      }
+      console.log(`     npx nx g @nx/storybook:configuration ${targetLib}`)
+      console.log('')
+      console.log('  This creates:')
+      console.log(`     • libs/${targetLib}/.storybook/main.ts  (project-level config)`)
+      console.log(`     • libs/${targetLib}/.storybook/preview.ts`)
+      console.log(`     • storybook + build-storybook targets in project.json`)
+      console.log('')
+      
+      const nextStep = nxStorybookInstalled ? 2 : 3
+      console.log(`  ${nextStep}. Install remaining Storybook packages:`)
+      
+      const sbDeps = [
+        'storybook@^10.0.0',
+        '@storybook/react@^10.0.0',
+      ]
+      if (framework === 'tamagui') {
+        sbDeps.push('@storybook/react-webpack5@^10.0.0')
+      } else {
+        sbDeps.push('@storybook/react-vite@^10.0.0')
+      }
+      console.log(`     npm install -D ${sbDeps.join(' ')}`)
+      console.log('')
+      console.log(`  ${nextStep + 1}. Run Storybook:`)
+      console.log(`     npx nx storybook ${targetLib}`)
+      console.log('')
+    }
+
+    if (dryRun) {
+      console.log('ℹ️  Dry run mode\n')
+    }
+
+    return result
+  }
+
+  // Standard (non-Nx) project setup
   // Create .storybook directory
   const storybookDir = path.join(rootDir, '.storybook')
   
@@ -590,11 +653,6 @@ export async function runSetup(
   // Print dependencies
   console.log('\n📦 Install these dependencies:\n')
   
-  const allDeps = [...result.dependencies.dev]
-  if (result.dependencies.prod.length > 0) {
-    allDeps.push(...result.dependencies.prod)
-  }
-
   const installCmd = `npm install -D ${result.dependencies.dev.join(' ')}`
   console.log(`  ${installCmd}`)
   
