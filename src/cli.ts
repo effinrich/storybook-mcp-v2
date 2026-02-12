@@ -128,9 +128,39 @@ async function main() {
     process.exit(0)
   }
 
-  // Check if .storybook exists - if not, prompt user to run --setup
+  // Check if .storybook exists - check root AND Nx lib-level locations
   const storybookDir = path.join(cwd, '.storybook')
-  if (!fs.existsSync(storybookDir)) {
+  let hasStorybookConfig = fs.existsSync(storybookDir)
+
+  // For Nx monorepos, also check lib-level .storybook directories
+  if (!hasStorybookConfig && fs.existsSync(path.join(cwd, 'nx.json'))) {
+    for (const base of ['libs', 'packages']) {
+      const baseDir = path.join(cwd, base)
+      if (!fs.existsSync(baseDir)) continue
+      const entries = fs.readdirSync(baseDir, { withFileTypes: true })
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          // Check direct: libs/<name>/.storybook
+          if (fs.existsSync(path.join(baseDir, entry.name, '.storybook'))) {
+            hasStorybookConfig = true
+            break
+          }
+          // Check nested: libs/<name>/<sub>/.storybook
+          const subEntries = fs.readdirSync(path.join(baseDir, entry.name), { withFileTypes: true })
+          for (const sub of subEntries) {
+            if (sub.isDirectory() && fs.existsSync(path.join(baseDir, entry.name, sub.name, '.storybook'))) {
+              hasStorybookConfig = true
+              break
+            }
+          }
+        }
+        if (hasStorybookConfig) break
+      }
+      if (hasStorybookConfig) break
+    }
+  }
+
+  if (!hasStorybookConfig) {
     console.error(`
 ⚠️  No .storybook configuration found.
 
@@ -139,9 +169,12 @@ Run setup first to create Storybook config and scripts:
   npx forgekit-storybook-mcp --setup
 
 This will:
-  • Create .storybook/main.ts and preview.ts
+  • Create .storybook/main.ts and preview.tsx
   • Add storybook scripts to package.json
   • Detect your framework (Chakra, shadcn, etc.)
+
+For Nx monorepos, use:
+  npx nx g @nx/storybook:configuration <project-name>
 
 Use --setup --dry-run to preview without writing files.
 `)
@@ -252,24 +285,63 @@ async function autoDetectConfig(rootDir: string): Promise<StorybookMCPConfig> {
   const libraries: StorybookMCPConfig['libraries'] = []
   let framework: StorybookMCPConfig['framework'] = 'vanilla'
 
-  // Check for common library structures
-  const possiblePaths = [
-    { path: 'src/components', name: 'components', prefix: 'Components' },
-    { path: 'src/lib', name: 'lib', prefix: 'Lib' },
-    { path: 'libs/ui/src', name: 'ui', prefix: 'UI' },
-    { path: 'libs/shared/ui/src', name: 'shared-ui', prefix: 'Shared / UI' },
-    { path: 'packages/ui/src', name: 'ui', prefix: 'UI' },
-    { path: 'apps/web/src/components', name: 'web', prefix: 'Web / Components' },
-  ]
+  const isNx = fs.existsSync(path.join(rootDir, 'nx.json'))
 
-  for (const { path: libPath, name, prefix } of possiblePaths) {
-    const fullPath = path.join(rootDir, libPath)
-    if (fs.existsSync(fullPath)) {
-      libraries.push({
-        name,
-        path: libPath,
-        storyTitlePrefix: prefix,
-      })
+  if (isNx) {
+    // Nx monorepo: discover all libs with src/ directories (up to 2 levels deep)
+    for (const base of ['libs', 'packages']) {
+      const baseDir = path.join(rootDir, base)
+      if (!fs.existsSync(baseDir)) continue
+
+      const walkLibs = (dir: string, depth: number) => {
+        if (depth > 2) return
+        const entries = fs.readdirSync(dir, { withFileTypes: true })
+        for (const entry of entries) {
+          if (!entry.isDirectory() || entry.name.startsWith('.') || entry.name === 'node_modules') continue
+          const entryPath = path.join(dir, entry.name)
+          const srcPath = path.join(entryPath, 'src')
+          const hasProjectJson = fs.existsSync(path.join(entryPath, 'project.json'))
+
+          if (fs.existsSync(srcPath) && hasProjectJson) {
+            const relPath = path.relative(rootDir, srcPath)
+            const libRelPath = path.relative(rootDir, entryPath)
+            // Build a readable name from the path: libs/shared/ui → shared-ui
+            const nameParts = path.relative(path.join(rootDir, base), entryPath).split(path.sep)
+            const libName = nameParts.join('-')
+            const prefix = nameParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' / ')
+
+            libraries.push({
+              name: libName,
+              path: relPath,
+              storyTitlePrefix: prefix,
+            })
+          } else if (!hasProjectJson) {
+            // Could be a grouping folder (e.g., libs/shared/) — recurse
+            walkLibs(entryPath, depth + 1)
+          }
+        }
+      }
+
+      walkLibs(baseDir, 0)
+    }
+  } else {
+    // Standard project: check common paths
+    const possiblePaths = [
+      { path: 'src/components', name: 'components', prefix: 'Components' },
+      { path: 'src/lib', name: 'lib', prefix: 'Lib' },
+      { path: 'packages/ui/src', name: 'ui', prefix: 'UI' },
+      { path: 'apps/web/src/components', name: 'web', prefix: 'Web / Components' },
+    ]
+
+    for (const { path: libPath, name, prefix } of possiblePaths) {
+      const fullPath = path.join(rootDir, libPath)
+      if (fs.existsSync(fullPath)) {
+        libraries.push({
+          name,
+          path: libPath,
+          storyTitlePrefix: prefix,
+        })
+      }
     }
   }
 

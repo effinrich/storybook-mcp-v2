@@ -185,28 +185,61 @@ export function findNxLibName(rootDir: string): string | undefined {
  * findNxLibName() returns only the name; libraries can live in libs/ or packages/.
  */
 function resolveNxLibPath(rootDir: string, nxLibName: string): string | null {
-  const libsDir = path.join(rootDir, 'libs')
-  const packagesDir = path.join(rootDir, 'packages')
+  // nxLibName can be "ui", "shared-ui", "portal-ui", etc.
+  // The name is derived from the path: libs/shared/ui → "shared-ui"
+  // So we convert dashes back to path separators and search
 
-  // Nested structure mappings (must match findNxLibName's nestedUiPaths)
-  const nestedPaths: Array<{ dir: string; name: string }> = [
-    { dir: path.join(libsDir, 'shared', 'ui'), name: 'shared-ui' },
-    { dir: path.join(libsDir, 'ui'), name: 'ui' },
-    { dir: path.join(packagesDir, 'ui'), name: 'ui' }
-  ]
-  for (const { dir, name } of nestedPaths) {
-    if (name === nxLibName && fs.existsSync(dir)) {
-      return path.relative(rootDir, dir)
-    }
-  }
-
-  // Flat structure: libs/x or packages/x
   for (const base of ['libs', 'packages']) {
-    const fullPath = path.join(rootDir, base, nxLibName)
-    if (fs.existsSync(fullPath)) {
+    const baseDir = path.join(rootDir, base)
+    if (!fs.existsSync(baseDir)) continue
+
+    // Try direct match: libs/<nxLibName>
+    const directPath = path.join(baseDir, nxLibName)
+    if (fs.existsSync(directPath)) {
       return `${base}/${nxLibName}`
     }
+
+    // Try nested match: convert "shared-ui" → "shared/ui"
+    const nestedPath = path.join(baseDir, ...nxLibName.split('-'))
+    if (fs.existsSync(nestedPath)) {
+      return path.relative(rootDir, nestedPath).replace(/\\/g, '/')
+    }
+
+    // Walk up to 2 levels deep looking for a project.json with matching name
+    const walkFind = (dir: string, depth: number): string | null => {
+      if (depth > 2) return null
+      const entries = fs.readdirSync(dir, { withFileTypes: true })
+      for (const entry of entries) {
+        if (!entry.isDirectory() || entry.name.startsWith('.') || entry.name === 'node_modules') continue
+        const entryPath = path.join(dir, entry.name)
+        const projectJsonPath = path.join(entryPath, 'project.json')
+
+        if (fs.existsSync(projectJsonPath)) {
+          // Check if project.json name matches
+          try {
+            const project = JSON.parse(fs.readFileSync(projectJsonPath, 'utf-8'))
+            if (project.name === nxLibName) {
+              return path.relative(rootDir, entryPath).replace(/\\/g, '/')
+            }
+          } catch { /* ignore */ }
+
+          // Also check by derived name from path
+          const nameParts = path.relative(baseDir, entryPath).split(path.sep)
+          if (nameParts.join('-') === nxLibName) {
+            return path.relative(rootDir, entryPath).replace(/\\/g, '/')
+          }
+        }
+
+        const found = walkFind(entryPath, depth + 1)
+        if (found) return found
+      }
+      return null
+    }
+
+    const found = walkFind(baseDir, 0)
+    if (found) return found
   }
+
   return null
 }
 
@@ -225,11 +258,12 @@ function generateMainTs(config: SetupConfig): string {
   const addons: string[] = []
 
   // Framework-specific stories glob
+  // For Nx, .storybook lives inside the lib dir, so stories are at ../src/
   let storiesGlob: string[]
   if (projectType === 'nx') {
     storiesGlob = [
-      '../libs/**/src/**/*.stories.@(js|jsx|ts|tsx)',
-      '../libs/**/src/**/*.mdx'
+      '../src/**/*.stories.@(js|jsx|ts|tsx)',
+      '../src/**/*.mdx'
     ]
   } else {
     storiesGlob = ['../src/**/*.stories.@(js|jsx|ts|tsx)', '../src/**/*.mdx']
@@ -570,76 +604,49 @@ export async function runSetup(
   }
   console.log('')
 
-  // Nx monorepos: guide user to use Nx's Storybook generator instead of manual scaffolding
+  // Determine where .storybook config should live
+  let storybookDir: string
+
   if (projectType === 'nx') {
     const targetLib = nxLibName || '<project-name>'
 
-    // Check if @nx/storybook is installed
+    if (!nxLibName) {
+      console.log('  ⚠️  Could not auto-detect an Nx library. Use --lib=<name> to specify one.')
+      console.log(`     npx forgekit-storybook-mcp --setup --lib=<project-name>`)
+      console.log('')
+      return result
+    }
+
+    // Resolve actual lib path
+    const libBasePath = resolveNxLibPath(rootDir, nxLibName)
+    if (!libBasePath) {
+      console.log(`  ⚠️  Could not find library "${nxLibName}" in libs/ or packages/`)
+      console.log('')
+      return result
+    }
+
+    storybookDir = path.join(rootDir, libBasePath, '.storybook')
+    console.log(`  📍 Nx library: ${targetLib} (${libBasePath})`)
+
+    // Check if @nx/storybook is installed and suggest it
     const nxStorybookInstalled = fs.existsSync(
       path.join(rootDir, 'node_modules', '@nx', 'storybook')
     )
-
-    // Resolve actual lib path (libs/ or packages/) — findNxLibName searches both
-    const libBasePath = nxLibName ? resolveNxLibPath(rootDir, nxLibName) : null
-    const libStorybookDir = libBasePath
-      ? path.join(rootDir, libBasePath, '.storybook')
-      : null
-    const nxStorybookConfigured =
-      libStorybookDir && fs.existsSync(libStorybookDir)
-
-    if (nxStorybookConfigured) {
-      console.log(`  ✅ Storybook already configured for ${targetLib} via Nx`)
-      console.log(`     Config: ${libBasePath}/.storybook/`)
-      console.log('')
-    } else {
-      console.log(
-        '  📋 Nx monorepo detected — use the Nx Storybook generator for proper setup:\n'
-      )
-
-      if (!nxStorybookInstalled) {
-        console.log(`  1. Install @nx/storybook:`)
-        console.log(`     npm install -D @nx/storybook@latest`)
-        console.log('')
-        console.log(`  2. Generate Storybook configuration:`)
-      } else {
-        console.log(`  1. Generate Storybook configuration:`)
-      }
-      console.log(`     npx nx g @nx/storybook:configuration ${targetLib}`)
-      console.log('')
-      const createdPath = libBasePath || `libs/${targetLib}`
-      console.log('  This creates:')
-      console.log(
-        `     • ${createdPath}/.storybook/main.ts  (project-level config)`
-      )
-      console.log(`     • ${createdPath}/.storybook/preview.ts`)
-      console.log(`     • storybook + build-storybook targets in project.json`)
-      console.log('')
-
-      const nextStep = nxStorybookInstalled ? 2 : 3
-      console.log(`  ${nextStep}. Install remaining Storybook packages:`)
-      console.log(`     npm install -D ${result.dependencies.dev.join(' ')}`)
-      console.log('')
-      console.log(`  ${nextStep + 1}. Run Storybook:`)
-      console.log(`     npx nx storybook ${targetLib}`)
-      console.log('')
+    if (nxStorybookInstalled) {
+      console.log(`  💡 Tip: You can also use \`npx nx g @nx/storybook:configuration ${targetLib}\` for Nx-native setup`)
     }
-
-    if (dryRun) {
-      console.log('ℹ️  Dry run mode\n')
-    }
-
-    return result
+    console.log('')
+  } else {
+    storybookDir = path.join(rootDir, '.storybook')
   }
 
-  // Standard (non-Nx) project setup
   // Create .storybook directory
-  const storybookDir = path.join(rootDir, '.storybook')
-
   if (!fs.existsSync(storybookDir)) {
     if (!dryRun) {
       fs.mkdirSync(storybookDir, { recursive: true })
     }
-    console.log(`  📁 Created .storybook/`)
+    const relDir = path.relative(rootDir, storybookDir)
+    console.log(`  📁 Created ${relDir}/`)
   }
 
   // Generate main.ts
@@ -661,22 +668,60 @@ export async function runSetup(
     )
   }
 
-  // Generate preview.ts
-  const previewPath = path.join(storybookDir, 'preview.ts')
-  const previewExists = fs.existsSync(previewPath)
+  // Generate preview.tsx (uses JSX in decorators)
+  const previewTsxPath = path.join(storybookDir, 'preview.tsx')
+  const previewTsxExists = fs.existsSync(previewTsxPath)
+  const legacyPreviewPath = path.join(storybookDir, 'preview.ts')
+  const legacyPreviewExists = fs.existsSync(legacyPreviewPath)
 
-  if (!previewExists || force) {
+  if (legacyPreviewExists && !previewTsxExists) {
+    // preview.ts exists — check if it contains JSX and rename to .tsx
+    const content = fs.readFileSync(legacyPreviewPath, 'utf-8')
+    const hasJsx = /<\w+[\s/>]/.test(content) || content.includes('JSX')
+
+    if (hasJsx || force) {
+      if (!dryRun) {
+        fs.renameSync(legacyPreviewPath, previewTsxPath)
+      }
+      console.log(
+        `  📄 Renamed .storybook/preview.ts → preview.tsx (contains JSX)`
+      )
+    } else if (force) {
+      // --force: overwrite with generated content as .tsx
+      const previewContent = generatePreviewTs(framework)
+      if (!dryRun) {
+        fs.unlinkSync(legacyPreviewPath)
+        fs.writeFileSync(previewTsxPath, previewContent)
+      }
+      result.filesCreated.push('.storybook/preview.tsx')
+      console.log(`  📄 Replaced .storybook/preview.ts with preview.tsx`)
+    } else {
+      console.log(
+        `  ⏭️  Skipped .storybook/preview.ts (already exists, use --force to overwrite)`
+      )
+    }
+  } else if (!previewTsxExists && !legacyPreviewExists) {
+    // No preview at all — create fresh
     const previewContent = generatePreviewTs(framework)
     if (!dryRun) {
-      fs.writeFileSync(previewPath, previewContent)
+      fs.writeFileSync(previewTsxPath, previewContent)
     }
-    result.filesCreated.push('.storybook/preview.ts')
-    console.log(
-      `  📄 ${previewExists ? 'Overwrote' : 'Created'} .storybook/preview.ts`
-    )
+    result.filesCreated.push('.storybook/preview.tsx')
+    console.log(`  📄 Created .storybook/preview.tsx`)
+  } else if (force && previewTsxExists) {
+    // --force with existing .tsx — overwrite
+    const previewContent = generatePreviewTs(framework)
+    if (!dryRun) {
+      fs.writeFileSync(previewTsxPath, previewContent)
+      if (legacyPreviewExists) {
+        fs.unlinkSync(legacyPreviewPath)
+      }
+    }
+    result.filesCreated.push('.storybook/preview.tsx')
+    console.log(`  📄 Overwrote .storybook/preview.tsx`)
   } else {
     console.log(
-      `  ⏭️  Skipped .storybook/preview.ts (already exists, use --force to overwrite)`
+      `  ⏭️  Skipped .storybook/preview.tsx (already exists, use --force to overwrite)`
     )
   }
 
@@ -724,10 +769,10 @@ export async function runSetup(
   // Print next steps
   console.log('📋 Next steps:\n')
   console.log('  1. Run the install command above')
-  console.log('  2. Review .storybook/preview.ts and customize as needed')
+  console.log('  2. Review .storybook/preview.tsx and customize as needed')
   if (framework !== 'vanilla') {
     console.log(
-      `  3. Ensure your ${framework} theme/config is properly imported in preview.ts`
+      `  3. Ensure your ${framework} theme/config is properly imported in preview.tsx`
     )
   }
   console.log(
