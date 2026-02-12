@@ -20,6 +20,7 @@ import { DEFAULT_CONFIG } from './types.js'
 import { initializeComponents } from './utils/initializer.js'
 import { validateLicenseAsync } from './utils/license.js'
 import { runSetup } from './utils/setup.js'
+import { runPreflight } from './utils/preflight.js'
 
 // Parse CLI arguments
 function parseArgs(): {
@@ -189,6 +190,24 @@ Use --setup --dry-run to preview without writing files.
 
   console.error(`[storybook-mcp] Framework: ${config.framework}`)
   console.error(`[storybook-mcp] Libraries: ${config.libraries.map(l => l.name).join(', ')}`)
+
+  // Run preflight checks
+  const preflight = await runPreflight(cwd)
+  if (!preflight.passed) {
+    console.error('\n⚠️  Preflight checks found issues:\n')
+    for (const check of preflight.checks.filter(c => c.status !== 'pass')) {
+      const icon = check.status === 'fail' ? '❌' : '⚠️'
+      console.error(`  ${icon} ${check.message}`)
+      if (check.fix) console.error(`     → ${check.fix}`)
+    }
+    if (preflight.installCommands.length > 0) {
+      console.error('\n  Fix with:\n')
+      for (const cmd of preflight.installCommands) {
+        console.error(`    ${cmd}`)
+      }
+    }
+    console.error('')
+  }
 
   // Validate license (async with caching)
   const license = await validateLicenseAsync(config)

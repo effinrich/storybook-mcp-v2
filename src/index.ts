@@ -30,6 +30,7 @@ import {
   syncComponentTool,
   generateTestTool,
   generateDocsTool,
+  checkHealthTool,
 } from './tools.js'
 
 export { StorybookMCPConfig } from './types.js'
@@ -306,6 +307,14 @@ export function createStorybookMCPServer(config: StorybookMCPConfig) {
           required: ['componentPath'],
         },
       },
+      {
+        name: 'check_health',
+        description: 'Check Storybook installation health — missing packages, outdated configs, version mismatches',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
     ],
   }))
 
@@ -366,6 +375,10 @@ export function createStorybookMCPServer(config: StorybookMCPConfig) {
 
         case 'generate_docs':
           result = await generateDocsTool(config, args as any)
+          break
+
+        case 'check_health':
+          result = await checkHealthTool(config)
           break
 
         default:

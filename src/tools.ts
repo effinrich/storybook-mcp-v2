@@ -12,6 +12,7 @@ import { generateTest, writeTestFile } from './utils/test-generator.js'
 import { generateDocs, writeDocsFile } from './utils/docs-generator.js'
 import { initializeComponents, syncSingleComponent } from './utils/initializer.js'
 import { validateLicense, requireFeature } from './utils/license.js'
+import { runPreflight } from './utils/preflight.js'
 
 /**
  * Tool: list_components
@@ -400,6 +401,18 @@ export async function generateTestTool(
       : written
         ? `Created test at ${test.filePath}`
         : `Test already exists at ${test.filePath}`,
+  }
+}
+
+/**
+ * Tool: check_health
+ * Check Storybook installation health
+ */
+export async function checkHealthTool(config: StorybookMCPConfig) {
+  const result = await runPreflight(config.rootDir)
+  return {
+    ...result,
+    summary: result.summary,
   }
 }
 

@@ -354,6 +354,7 @@ Add to `claude_desktop_config.json`:
 | [`list_templates`](#list_templates) | List all available templates |
 | [`get_component_coverage`](#get_component_coverage) | Get story coverage statistics |
 | [`suggest_stories`](#suggest_stories) | Get prioritized list of components needing stories |
+| [`check_health`](#check_health) | Check Storybook installation health — missing packages, outdated configs, version mismatches |
 
 ---
 
@@ -1063,6 +1064,34 @@ Get a prioritized list of components that need stories.
   "total": 8,
   "showing": 2,
   "summary": "8 components without stories. Showing top 2."
+}
+```
+
+---
+
+### `check_health`
+
+Check Storybook installation health — missing packages, outdated configs, and version mismatches. Useful for diagnosing setup issues, especially when migrating to Storybook 10.
+
+**Parameters:** None
+
+**Example:**
+
+```json
+{}
+```
+
+**Response:**
+
+```json
+{
+  "passed": false,
+  "checks": [
+    { "name": "package:storybook", "status": "pass", "message": "storybook is installed" },
+    { "name": "config:main:addon:@storybook/addon-essentials", "status": "warn", "message": "@storybook/addon-essentials is bundled into storybook in v10 — can be removed from addons list", "fix": "Remove '@storybook/addon-essentials' from addons array in .storybook/main" }
+  ],
+  "installCommands": [],
+  "summary": "Preflight: 1 warning(s) out of 8 checks"
 }
 ```
 
