@@ -97,7 +97,9 @@ This means your Storybook documentation stays in sync with your components autom
 **This tool follows a "Free for Basic / Paid for Pro" model.**
 
 ### Free Tier
+
 Perfect for individuals and trying out the tool.
+
 - ✅ List and analyze components
 - ✅ Generate basic stories (`basic` template)
 - ✅ Sync up to 5 components per run
@@ -106,7 +108,9 @@ Perfect for individuals and trying out the tool.
 - ❌ Docs generation (`generate_docs`)
 
 ### Pro Tier — $49 (Lifetime License)
+
 For professional teams requiring complete coverage.
+
 - ✅ **Unlimited** sync
 - ✅ **All** templates (Interactive, MSW, Router, etc.)
 - ✅ **Test generation** (Playwright/Vitest)
@@ -1300,4 +1304,3 @@ This MCP focuses on **generating** stories, while the official one focuses on **
 ## License
 
 MIT
-
