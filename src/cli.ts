@@ -326,15 +326,17 @@ async function autoDetectConfig(rootDir: string): Promise<StorybookMCPConfig> {
     }
   } else {
     // Standard project: check common paths
+    // Note: componentPatterns include **/src/**/*.tsx, so lib paths should be
+    // the project/package root (not src/ subdirs) to avoid double-pathing
     const possiblePaths = [
-      { path: 'src/components', name: 'components', prefix: 'Components' },
-      { path: 'src/lib', name: 'lib', prefix: 'Lib' },
-      { path: 'packages/ui/src', name: 'ui', prefix: 'UI' },
-      { path: 'apps/web/src/components', name: 'web', prefix: 'Web / Components' },
+      { check: 'src/components', path: '.', name: 'components', prefix: 'Components' },
+      { check: 'src/lib', path: '.', name: 'lib', prefix: 'Lib' },
+      { check: 'packages/ui/src', path: 'packages/ui', name: 'ui', prefix: 'UI' },
+      { check: 'apps/web/src/components', path: 'apps/web', name: 'web', prefix: 'Web / Components' },
     ]
 
-    for (const { path: libPath, name, prefix } of possiblePaths) {
-      const fullPath = path.join(rootDir, libPath)
+    for (const { check, path: libPath, name, prefix } of possiblePaths) {
+      const fullPath = path.join(rootDir, check)
       if (fs.existsSync(fullPath)) {
         libraries.push({
           name,
