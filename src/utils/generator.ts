@@ -327,7 +327,7 @@ function buildVariantStories(analysis: ComponentAnalysis): string | null {
     stories += `  render: () => (\n`
     stories += `    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>\n`
     for (const size of sizeProp.controlOptions) {
-      stories += `      <${analysis.name} size="${size}">${size}</\${analysis.name}>\n`
+      stories += `      <${analysis.name} size="${size}">${size}</${analysis.name}>\n`
     }
     stories += `    </div>\n`
     stories += `  ),\n`
@@ -342,7 +342,7 @@ function buildVariantStories(analysis: ComponentAnalysis): string | null {
     stories += `  render: () => (\n`
     stories += `    <div style={{ display: 'flex', gap: '1rem' }}>\n`
     for (const variant of variantProp.controlOptions) {
-      stories += `      <${analysis.name} variant="${variant}">${variant}</\${analysis.name}>\n`
+      stories += `      <${analysis.name} variant="${variant}">${variant}</${analysis.name}>\n`
     }
     stories += `    </div>\n`
     stories += `  ),\n`

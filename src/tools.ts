@@ -316,13 +316,16 @@ export async function syncAll(
     }
   }
 
-  const result = await initializeComponents(config, options)
+  const result = await initializeComponents(config, {
+    ...options,
+    maxComponents: license.maxSyncLimit === Infinity ? undefined : license.maxSyncLimit,
+  })
 
-  // Apply sync limit for free tier
-  if (license.tier === 'free' && result.scanned > license.maxSyncLimit) {
+  // Notify if sync limit was applied
+  if (license.tier === 'free' && result.scanned > (license.maxSyncLimit || Infinity)) {
     return {
       ...result,
-      summary: `Free Tier Limit: Synced first ${license.maxSyncLimit} components only. Upgrade to Pro for unlimited sync.`,
+      summary: `Free Tier Limit: Synced first ${license.maxSyncLimit} of ${result.scanned} components. Upgrade to Pro for unlimited sync.`,
       warning: 'Sync limit reached (5 components max for Free Tier)'
     }
   }

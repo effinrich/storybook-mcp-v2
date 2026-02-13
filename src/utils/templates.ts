@@ -363,6 +363,7 @@ import { {{PageName}} } from './{{PageName}}'
 const meta: Meta<typeof {{PageName}}> = {
   title: 'Pages/{{PageName}}',
   component: {{PageName}},
+  tags: [],
   parameters: {
     layout: 'fullscreen',
   },
