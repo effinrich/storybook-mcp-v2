@@ -100,13 +100,13 @@ function validateMeta(
     })
   }
 
-  // Check for autodocs tag
-  if (!source.includes("'autodocs'") && !source.includes('"autodocs"')) {
-    suggestions.push({
-      type: 'suggestion',
-      code: 'NO_AUTODOCS',
-      message: "Consider adding 'autodocs' tag for automatic documentation",
-      fix: "Add tags: ['autodocs'] to meta",
+  // Check tags — when using explicit MDX docs, tags should be empty
+  if (source.includes("'autodocs'") || source.includes('"autodocs"')) {
+    warnings.push({
+      type: 'warning',
+      code: 'AUTODOCS_WITH_MDX',
+      message: "Remove 'autodocs' tag when using explicit MDX docs to avoid duplicate pages",
+      fix: "Change tags: ['autodocs'] to tags: []",
     })
   }
 }

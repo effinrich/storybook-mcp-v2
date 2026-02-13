@@ -504,7 +504,7 @@ import { Component } from './Component'
 const meta: Meta<typeof Component> = {
   title: 'Components/Component',
   component: Component,
-  tags: ['autodocs'],
+  tags: [],
 }
 
 export default meta
@@ -587,7 +587,7 @@ export const Mobile: Story = {
 
 ## Best Practices
 
-1. **Always add autodocs tag** for automatic documentation
+1. **Use explicit MDX docs** instead of autodocs tag (set tags: [])
 2. **Use type imports** for Meta and StoryObj
 3. **Include play functions** for interactive components
 4. **Test keyboard navigation** for accessibility

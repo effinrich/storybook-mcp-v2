@@ -87,7 +87,7 @@ function readFileIfExists(filePath: string): string | null {
 }
 
 function checkRequiredPackages(rootDir: string, checks: PreflightCheck[], installCommands: string[]) {
-  const required = ['storybook', '@storybook/react', 'react', 'react-dom']
+  const required = ['storybook', '@storybook/react', '@storybook/addon-docs', 'react', 'react-dom']
   const missing: string[] = []
 
   for (const pkg of required) {
@@ -182,14 +182,26 @@ function checkMainConfig(rootDir: string, checks: PreflightCheck[]) {
     return
   }
 
-  // Check for bundled addons that shouldn't be listed separately in SB10
-  const bundledAddons = [
+  // Check for required addons in SB10
+  const requiredAddons = ['@storybook/addon-docs']
+  for (const addon of requiredAddons) {
+    if (!content.includes(addon)) {
+      checks.push({
+        name: `config:main:addon:${addon}`,
+        status: 'warn',
+        message: `${addon} should be in addons array for SB10`,
+        fix: `Add '${addon}' to addons array in .storybook/main`,
+      })
+    }
+  }
+
+  // Check for deprecated/bundled addons that should be removed
+  const deprecatedAddons = [
     '@storybook/addon-essentials',
     '@storybook/addon-interactions',
     '@storybook/addon-links',
-    '@storybook/addon-a11y',
   ]
-  for (const addon of bundledAddons) {
+  for (const addon of deprecatedAddons) {
     if (content.includes(addon)) {
       checks.push({
         name: `config:main:addon:${addon}`,
@@ -200,23 +212,7 @@ function checkMainConfig(rootDir: string, checks: PreflightCheck[]) {
     }
   }
 
-  // Check for old StorybookConfig import
-  if (content.includes("from '@storybook/react-vite'") && content.includes('StorybookConfig')) {
-    // This is fine in older versions but in SB10 it should come from 'storybook'
-    checks.push({
-      name: 'config:main:import',
-      status: 'warn',
-      message: "StorybookConfig imported from '@storybook/react-vite' — in SB10 import from 'storybook'",
-      fix: "Change to: import type { StorybookConfig } from 'storybook'",
-    })
-  } else if (content.includes("from '@storybook/react-webpack5'") && content.includes('StorybookConfig')) {
-    checks.push({
-      name: 'config:main:import',
-      status: 'warn',
-      message: "StorybookConfig imported from '@storybook/react-webpack5' — in SB10 import from 'storybook'",
-      fix: "Change to: import type { StorybookConfig } from 'storybook'",
-    })
-  }
+  // StorybookConfig can be imported from the framework package — that's fine in SB10
 
   // Check for framework.name
   if (!content.includes('framework')) {

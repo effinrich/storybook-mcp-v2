@@ -28,31 +28,17 @@ export async function generateDocs(
   const kebabName = toKebabCase(name)
   const docsPath = buildDocsPath(analysis.filePath)
   
-  const library = config.libraries.find(l => l.name === analysis.library)
-  const importPath = library?.importAlias 
-    ? `${library.importAlias}/${name}`
-    : `@/components/${name}`
+  const storiesImportName = `${name}Stories`
+  const storiesFileName = path.basename(analysis.filePath, path.extname(analysis.filePath))
 
-  let content = `---
-title: ${name}
-description: Documentation for the ${name} component
----
+  let content = `import { Canvas, Meta, ArgTypes } from '@storybook/addon-docs/blocks'
+import * as ${storiesImportName} from './${storiesFileName}.stories'
 
-import { ${name} } from '${importPath}'
-import { Canvas, Meta, Story, Controls, ArgTypes } from 'storybook/blocks'
-import * as ${name}Stories from './${path.basename(analysis.filePath, path.extname(analysis.filePath))}.stories'
-
-<Meta of={${name}Stories} />
+<Meta of={${storiesImportName}} />
 
 # ${name}
 
 ${generateDescription(name, props, dependencies)}
-
-## Import
-
-\`\`\`tsx
-import { ${name} } from '${importPath}'
-\`\`\`
 
 ## Usage
 
@@ -103,7 +89,7 @@ ${sizeProp.controlOptions.map(s => `<${name} size="${s}">${s}</${name}>`).join('
   content += `
 ## Props
 
-<ArgTypes of={${name}} />
+<ArgTypes of={${storiesImportName}} />
 
 ${generatePropsTable(props)}
 `

@@ -34,7 +34,7 @@ import { {{ComponentName}} } from './{{ComponentName}}'
 const meta: Meta<typeof {{ComponentName}}> = {
   title: 'Components/{{ComponentName}}',
   component: {{ComponentName}},
-  tags: ['autodocs'],
+  tags: [],
 }
 
 export default meta
@@ -59,7 +59,7 @@ import { {{ComponentName}} } from './{{ComponentName}}'
 const meta: Meta<typeof {{ComponentName}}> = {
   title: 'Components/{{ComponentName}}',
   component: {{ComponentName}},
-  tags: ['autodocs'],
+  tags: [],
   argTypes: {
     variant: {
       control: 'select',
@@ -118,7 +118,7 @@ import { {{ComponentName}} } from './{{ComponentName}}'
 const meta: Meta<typeof {{ComponentName}}> = {
   title: 'Components/{{ComponentName}}',
   component: {{ComponentName}},
-  tags: ['autodocs'],
+  tags: [],
   argTypes: {
     variant: {
       control: 'select',
@@ -208,7 +208,7 @@ import { {{ComponentName}} } from './{{ComponentName}}'
 const meta: Meta<typeof {{ComponentName}}> = {
   title: 'Components/{{ComponentName}}',
   component: {{ComponentName}},
-  tags: ['autodocs'],
+  tags: [],
 }
 
 export default meta
@@ -298,7 +298,7 @@ import { {{ComponentName}} } from './{{ComponentName}}'
 const meta: Meta<typeof {{ComponentName}}> = {
   title: 'Components/{{ComponentName}}',
   component: {{ComponentName}},
-  tags: ['autodocs'],
+  tags: [],
   decorators: [withRouter],
   parameters: {
     reactRouter: reactRouterParameters({
@@ -423,7 +423,7 @@ import { {{ComponentName}} } from './{{ComponentName}}'
 const meta: Meta<typeof {{ComponentName}}> = {
   title: 'Components/{{ComponentName}}',
   component: {{ComponentName}},
-  tags: ['autodocs'],
+  tags: [],
 }
 
 export default meta
@@ -518,7 +518,7 @@ import { {{FormName}} } from './{{FormName}}'
 const meta: Meta<typeof {{FormName}}> = {
   title: 'Forms/{{FormName}}',
   component: {{FormName}},
-  tags: ['autodocs'],
+  tags: [],
   argTypes: {
     onSubmit: { action: 'submitted' },
   },

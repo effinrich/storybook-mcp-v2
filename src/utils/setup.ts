@@ -253,21 +253,15 @@ function resolveNxLibPath(rootDir: string, nxLibName: string): string | null {
 function generateMainTs(config: SetupConfig): string {
   const { projectType, framework } = config
 
-  // In Storybook 10, essentials/interactions/a11y are bundled into the main
-  // `storybook` package — no separate addon packages needed in the config.
-  const addons: string[] = []
+  const addons: string[] = [
+    '@storybook/addon-docs',
+    '@storybook/addon-a11y',
+  ]
 
-  // Framework-specific stories glob
-  // For Nx, .storybook lives inside the lib dir, so stories are at ../src/
-  let storiesGlob: string[]
-  if (projectType === 'nx') {
-    storiesGlob = [
-      '../src/**/*.stories.@(js|jsx|ts|tsx)',
-      '../src/**/*.mdx'
-    ]
-  } else {
-    storiesGlob = ['../src/**/*.stories.@(js|jsx|ts|tsx)', '../src/**/*.mdx']
-  }
+  // Stories glob — use a single pattern that covers both stories and MDX
+  const storiesGlob = [
+    '../src/**/*.@(mdx|stories.@(js|jsx|ts|tsx))',
+  ]
 
   // Determine the framework package
   let frameworkPackage = '@storybook/react-vite'
@@ -284,9 +278,6 @@ const config: StorybookConfig = {
   framework: {
     name: '${frameworkPackage}',
     options: {},
-  },
-  docs: {
-    autodocs: 'tag',
   },
   typescript: {
     reactDocgen: 'react-docgen-typescript',
@@ -514,12 +505,11 @@ interface Dependencies {
 function getDependencies(config: SetupConfig): Dependencies {
   const { framework } = config
 
-  // Storybook 10.x — addons (essentials, interactions, a11y, blocks) are now
-  // bundled into the main `storybook` package. Only install what still exists as
-  // separate packages at v10.
   const dev: string[] = [
     'storybook@^10.0.0',
     '@storybook/react@^10.0.0',
+    '@storybook/addon-docs@^10.0.0',
+    '@storybook/addon-a11y@^10.0.0',
     '@storybook/test-runner@^0.24.0'
   ]
 

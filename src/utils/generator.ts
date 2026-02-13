@@ -267,7 +267,7 @@ function buildMeta(
   let meta = `const meta: Meta<typeof ${analysis.name}> = {\n`
   meta += `  title: '${title}',\n`
   meta += `  component: ${analysis.name},\n`
-  meta += `  tags: ['autodocs'],\n`
+  meta += `  tags: [],\n`
   
   if (decorators.length > 0) {
     meta += `  decorators: [${decorators.join(', ')}],\n`
