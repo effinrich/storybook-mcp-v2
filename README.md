@@ -1,5 +1,18 @@
 # forgekit-storybook-mcp
 
+<div align="center">
+
+**⚡ Pro License — $49 lifetime** | Unlimited sync • All templates • Test & docs generation
+
+[**Get Pro →**](https://buy.polar.sh/polar_cl_Tnd3ryKUJpYPnXF0kBW1KFHQnoLlxAq2cz9GL3Et0dV) · [npm](https://npmjs.com/package/forgekit-storybook-mcp) · [Docs](https://forgekit.cloud/storybook-mcp)
+
+[![npm version](https://img.shields.io/npm/v/forgekit-storybook-mcp)](https://npmjs.com/package/forgekit-storybook-mcp)
+[![downloads](https://img.shields.io/npm/dm/forgekit-storybook-mcp)](https://npmjs.com/package/forgekit-storybook-mcp)
+
+</div>
+
+---
+
 A **Model Context Protocol (MCP) server** for Storybook story generation, component analysis, and validation.
 
 **Framework-agnostic** - works with Chakra UI, shadcn/ui, Tamagui, Gluestack UI, React Native, or vanilla React.
