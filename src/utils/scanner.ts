@@ -209,15 +209,41 @@ function detectExportType(filePath: string): 'default' | 'named' {
  */
 function extractProps(source: string, componentName: string): PropDefinition[] {
   const props: PropDefinition[] = []
-  
-  // Look for interface/type definition
-  const propsPattern = new RegExp(
-    `(?:interface|type)\\s+${componentName}Props\\s*(?:extends[^{]+)?\\{([^}]+)\\}`,
-    's'
-  )
-  
-  const match = source.match(propsPattern)
-  if (!match) return props
+
+  // Try multiple prop naming conventions in order of specificity
+  const propPatterns = [
+    `${componentName}Props`,           // ButtonProps (most specific)
+    `${componentName}Properties`,      // ButtonProperties
+    `${componentName}PropTypes`,       // ButtonPropTypes
+    `I${componentName}Props`,          // IButtonProps
+    `Props`,                           // Generic Props
+    `IProps`,                          // Generic IProps
+    `ComponentProps`,                  // Generic ComponentProps
+  ]
+
+  let match: RegExpMatchArray | null = null
+  for (const propName of propPatterns) {
+    const pattern = new RegExp(
+      `(?:interface|type)\\s+${propName}\\s*(?:extends[^{]+)?\\{([^}]+)\\}`,
+      's'
+    )
+    match = source.match(pattern)
+    if (match) break
+  }
+
+  if (!match) {
+    // Try inline prop types: React.FC<{ ... }> or function Component({ ... })
+    const inlinePattern = new RegExp(
+      `(?:const|export\\s+const|function|export\\s+function)\\s+${componentName}[^{]*\\{([^}]+)\\}`,
+      's'
+    )
+    const inlineMatch = source.match(inlinePattern)
+    if (inlineMatch) {
+      match = inlineMatch
+    } else {
+      return props
+    }
+  }
 
   const propsBlock = match[1]
   
