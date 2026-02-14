@@ -50,7 +50,7 @@ export async function generateTest(
   if (hasPlaywright && (analysis.dependencies.usesRouter || analysis.props.some(p => p.name.startsWith('on')))) {
     content = generatePlaywrightTest(analysis, kebabName)
   } else {
-    content = generateVitestTest(analysis, kebabName)
+    content = generateVitestTest(config, analysis, kebabName)
   }
 
   return {
@@ -164,14 +164,51 @@ ${sizeProp.controlOptions.map(s => `    await expect(page.getByText('${s}')).toB
 }
 
 /**
+ * Get framework-specific provider wrapper for tests
+ */
+function getFrameworkWrapper(config: StorybookMCPConfig): {
+  imports: string
+  renderWrapper: (jsx: string) => string
+  note: string
+} {
+  switch (config.framework) {
+    case 'chakra':
+      return {
+        imports: `import { ChakraProvider } from '@chakra-ui/react'`,
+        renderWrapper: (jsx) => `<ChakraProvider>${jsx}</ChakraProvider>`,
+        note: '// If you have a custom theme, import and pass it: <ChakraProvider theme={theme}>',
+      }
+    case 'gluestack':
+      return {
+        imports: `import { GluestackUIProvider } from '@gluestack-ui/themed'`,
+        renderWrapper: (jsx) => `<GluestackUIProvider>${jsx}</GluestackUIProvider>`,
+        note: '// If you have a custom config, import and pass it to the provider',
+      }
+    case 'tamagui':
+      return {
+        imports: `import { TamaguiProvider } from 'tamagui'`,
+        renderWrapper: (jsx) => `<TamaguiProvider defaultTheme="light">${jsx}</TamaguiProvider>`,
+        note: '// Import your tamagui.config and pass it: <TamaguiProvider config={config}>',
+      }
+    default:
+      return {
+        imports: '',
+        renderWrapper: (jsx) => jsx,
+        note: '',
+      }
+  }
+}
+
+/**
  * Generate Vitest test
  */
-function generateVitestTest(analysis: ComponentAnalysis, kebabName: string): string {
+function generateVitestTest(config: StorybookMCPConfig, analysis: ComponentAnalysis, kebabName: string): string {
   const { name, filePath, props } = analysis
   const importPath = `./${path.basename(filePath, path.extname(filePath))}`
   const hasChildren = props.some(p => p.name === 'children')
   const eventProps = props.filter(p => p.name.startsWith('on'))
   const hasEvents = eventProps.length > 0
+  const wrapper = getFrameworkWrapper(config)
   
   // Build required props for rendering (non-optional, non-event, non-children)
   const requiredProps = props.filter(p => p.required && p.name !== 'children' && !p.name.startsWith('on'))
@@ -202,6 +239,9 @@ function generateVitestTest(analysis: ComponentAnalysis, kebabName: string): str
     }
   }
 
+  // Wrap JSX in framework provider if needed
+  const wrapRender = (jsx: string): string => wrapper.renderWrapper(jsx)
+
   // Only import vi if we need vi.fn()
   const vitestImports = hasEvents ? `import { describe, it, expect, vi } from 'vitest'` : `import { describe, it, expect } from 'vitest'`
   // Only import userEvent if we have events
@@ -210,11 +250,13 @@ function generateVitestTest(analysis: ComponentAnalysis, kebabName: string): str
   let content = `${vitestImports}
 import { render, screen } from '@testing-library/react'
 ${userEventImport}
+${wrapper.imports}
 import { ${name} } from '${importPath}'
+${wrapper.note ? `\n${wrapper.note}` : ''}
 
 describe('${name}', () => {
   it('renders correctly', () => {
-    render(${buildRenderProps()})
+    render(${wrapRender(buildRenderProps())})
     
     ${hasChildren ? `expect(screen.getByText('Test Content')).toBeInTheDocument()` : `expect(document.querySelector('[class]')).toBeInTheDocument()`}
   })
@@ -226,7 +268,7 @@ describe('${name}', () => {
     for (const variant of variantProp.controlOptions) {
       content += `
   it('renders ${variant} variant', () => {
-    render(${hasChildren ? `<${name} variant="${variant}">Content</${name}>` : `<${name} variant="${variant}" />`})
+    render(${wrapRender(hasChildren ? `<${name} variant="${variant}">Content</${name}>` : `<${name} variant="${variant}" />`)})
     
     ${hasChildren ? `expect(screen.getByText('Content')).toBeInTheDocument()` : `// Variant "${variant}" renders without error`}
   })
@@ -240,7 +282,7 @@ describe('${name}', () => {
     for (const size of sizeProp.controlOptions) {
       content += `
   it('renders ${size} size', () => {
-    render(${hasChildren ? `<${name} size="${size}">Content</${name}>` : `<${name} size="${size}" />`})
+    render(${wrapRender(hasChildren ? `<${name} size="${size}">Content</${name}>` : `<${name} size="${size}" />`)})
     
     ${hasChildren ? `expect(screen.getByText('Content')).toBeInTheDocument()` : `// Size "${size}" renders without error`}
   })
@@ -256,7 +298,7 @@ describe('${name}', () => {
     const user = userEvent.setup()
     const handleEvent = vi.fn()
     
-    render(${hasChildren ? `<${name} ${prop.name}={handleEvent}>Content</${name}>` : `<${name} ${prop.name}={handleEvent} />`})
+    render(${wrapRender(hasChildren ? `<${name} ${prop.name}={handleEvent}>Content</${name}>` : `<${name} ${prop.name}={handleEvent} />`)})
     
     ${hasChildren ? `await user.click(screen.getByText('Content'))` : `const el = document.querySelector('[class]')\n    if (el) await user.click(el)`}
     
@@ -269,7 +311,7 @@ describe('${name}', () => {
   if (props.some(p => p.name === 'disabled')) {
     content += `
   it('respects disabled state', () => {
-    render(${hasChildren ? `<${name} disabled>Content</${name}>` : `<${name} disabled />`})
+    render(${wrapRender(hasChildren ? `<${name} disabled>Content</${name}>` : `<${name} disabled />`)})
     
     ${hasChildren ? `const element = screen.getByText('Content')\n    expect(element).toBeDisabled()` : `// Disabled state renders without error`}
   })
