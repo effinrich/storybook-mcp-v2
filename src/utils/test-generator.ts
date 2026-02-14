@@ -17,6 +17,21 @@ export interface GeneratedTest {
 }
 
 /**
+ * Check if a package is installed in the project
+ */
+function isPackageInstalled(rootDir: string, packageName: string): boolean {
+  try {
+    const pkgPath = path.join(rootDir, 'package.json')
+    if (!fs.existsSync(pkgPath)) return false
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+    const deps = { ...pkg.dependencies, ...pkg.devDependencies }
+    return !!deps[packageName]
+  } catch {
+    return false
+  }
+}
+
+/**
  * Generate a test file for a component
  */
 export async function generateTest(
@@ -28,12 +43,13 @@ export async function generateTest(
   
   let content = ''
 
-  // Determine test type based on dependencies
-  if (analysis.dependencies.usesRouter || analysis.props.some(p => p.name.startsWith('on'))) {
-    // Use Playwright for interactive components
+  // Only use Playwright if it's actually installed in the project
+  // Otherwise default to vitest + @testing-library (works for all components)
+  const hasPlaywright = isPackageInstalled(config.rootDir, '@playwright/test')
+  
+  if (hasPlaywright && (analysis.dependencies.usesRouter || analysis.props.some(p => p.name.startsWith('on')))) {
     content = generatePlaywrightTest(analysis, kebabName)
   } else {
-    // Use Vitest for simpler components
     content = generateVitestTest(analysis, kebabName)
   }
 

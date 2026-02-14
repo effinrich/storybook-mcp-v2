@@ -21,7 +21,7 @@ const baseDeps = {
 }
 
 describe('test-generator', () => {
-  it('generates Playwright test for interactive component (has onClick)', async () => {
+  it('falls back to vitest for interactive component when Playwright not installed', async () => {
     const analysis: ComponentAnalysis = {
       name: 'Button',
       filePath: 'src/components/Button.tsx',
@@ -36,14 +36,16 @@ describe('test-generator', () => {
       suggestions: [],
       sourcePreview: '',
     }
+    // rootDir doesn't have @playwright/test installed, so should fall back to vitest
     const test = await generateTest(makeConfig(), analysis)
-    expect(test.content).toContain("from '@playwright/test'")
-    expect(test.content).toContain("test.describe('Button'")
-    expect(test.content).toContain('handles interactions')
+    expect(test.content).toContain("from 'vitest'")
+    expect(test.content).toContain("from '@testing-library/react'")
+    expect(test.content).toContain("describe('Button'")
+    expect(test.content).toContain('calls onClick')
     expect(test.filePath).toContain('.test.tsx')
   })
 
-  it('generates Playwright test for router component', async () => {
+  it('falls back to vitest for router component when Playwright not installed', async () => {
     const analysis: ComponentAnalysis = {
       name: 'NavLink',
       filePath: 'src/components/NavLink.tsx',
@@ -55,8 +57,10 @@ describe('test-generator', () => {
       suggestions: [],
       sourcePreview: '',
     }
+    // rootDir doesn't have @playwright/test installed, so should fall back to vitest
     const test = await generateTest(makeConfig(), analysis)
-    expect(test.content).toContain("from '@playwright/test'")
+    expect(test.content).toContain("from 'vitest'")
+    expect(test.content).not.toContain("from '@playwright/test'")
   })
 
   it('generates Vitest test for simple component (no events, no router)', async () => {
