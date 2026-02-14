@@ -3,7 +3,7 @@
  * Tool implementations for the MCP server
  */
 
-import type { StorybookMCPConfig } from './types.js'
+import type { StorybookMCPConfig, StoryGenerationOptions } from './types.js'
 import { scanComponents, analyzeComponent } from './utils/scanner.js'
 import { generateStory, writeStoryFile } from './utils/generator.js'
 import { validateStory } from './utils/validator.js'
@@ -96,7 +96,7 @@ export async function generateStoryTool(
     includeInteractive: args.includeInteractive ?? true,
     includeA11y: args.includeA11y ?? false,
     includeResponsive: args.includeResponsive ?? false,
-    template: args.template as any,
+    template: args.template as StoryGenerationOptions['template'],
     overwrite: args.overwrite ?? false,
   })
 
