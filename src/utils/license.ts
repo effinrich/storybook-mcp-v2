@@ -9,6 +9,7 @@ import os from 'node:os'
 import type { StorybookMCPConfig } from '../types.js'
 
 const POLAR_ORG_ID = process.env.POLAR_ORG_ID || 'c39241cb-629a-4beb-8ec8-31820430d5fd'
+const POLAR_API_URL = process.env.POLAR_API_URL || 'https://api.polar.sh'
 
 export type Feature = 
   | 'basic_stories'
@@ -69,7 +70,7 @@ function writeCache(cache: CachedLicense): void {
  */
 async function validateWithPolar(key: string): Promise<boolean> {
   try {
-    const response = await fetch('https://api.polar.sh/v1/customer-portal/license-keys/validate', {
+    const response = await fetch(`${POLAR_API_URL}/v1/customer-portal/license-keys/validate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
