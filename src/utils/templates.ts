@@ -4,6 +4,7 @@
  */
 
 import type { StoryTemplate } from '../types.js'
+import { TIMEOUTS } from './constants.js'
 
 /**
  * Get all available templates

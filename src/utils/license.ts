@@ -7,7 +7,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import type { StorybookMCPConfig } from '../types.js'
-import { POLAR_UPGRADE_URL } from './constants.js'
+import { POLAR_UPGRADE_URL, LICENSE_CACHE_TTL_MS } from './constants.js'
 
 const POLAR_ORG_ID = process.env.POLAR_ORG_ID || 'c39241cb-629a-4beb-8ec8-31820430d5fd'
 const POLAR_API_URL = process.env.POLAR_API_URL || 'https://api.polar.sh'
@@ -35,8 +35,7 @@ interface CachedLicense {
 const CACHE_DIR = path.join(os.homedir(), '.forgekit')
 const CACHE_FILE = path.join(CACHE_DIR, 'license-cache.json')
 
-// Cache duration: 24 hours
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000
+// Cache duration imported from constants
 
 // Module-level cache for async validation results
 let cachedValidation: LicenseStatus | null = null
@@ -143,7 +142,7 @@ export function validateLicense(config: StorybookMCPConfig): LicenseStatus {
   const cached = readCache()
   if (cached && cached.key === key) {
     const age = Date.now() - cached.checkedAt
-    if (age < CACHE_TTL_MS) {
+    if (age < LICENSE_CACHE_TTL_MS) {
       return {
         isValid: cached.valid,
         tier: cached.valid ? 'pro' : 'free',
@@ -184,7 +183,7 @@ export async function validateLicenseAsync(config: StorybookMCPConfig): Promise<
   const cached = readCache()
   if (cached && cached.key === key) {
     const age = Date.now() - cached.checkedAt
-    if (age < CACHE_TTL_MS) {
+    if (age < LICENSE_CACHE_TTL_MS) {
       const status: LicenseStatus = {
         isValid: cached.valid,
         tier: cached.valid ? 'pro' : 'free',

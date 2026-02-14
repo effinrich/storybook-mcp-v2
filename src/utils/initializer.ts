@@ -13,7 +13,7 @@ import type {
   ComponentAnalysis,
 } from '../types.js'
 import { scanComponents, analyzeComponent } from './scanner.js'
-import { POLAR_UPGRADE_URL } from './constants.js'
+import { POLAR_UPGRADE_URL, CACHE, FILE_EXTENSIONS } from './constants.js'
 import { generateStory, writeStoryFile } from './generator.js'
 import { generateTest, writeTestFile } from './test-generator.js'
 import { generateDocs, writeDocsFile } from './docs-generator.js'
@@ -76,8 +76,6 @@ export interface InitResult {
 // Hash Cache for Change Detection
 // ===========================================
 
-const CACHE_FILE = '.storybook-mcp-cache.json'
-
 interface HashCache {
   version: string
   components: Record<string, {
@@ -87,7 +85,7 @@ interface HashCache {
 }
 
 function loadCache(rootDir: string): HashCache {
-  const cachePath = path.join(rootDir, CACHE_FILE)
+  const cachePath = path.join(rootDir, CACHE.FILENAME)
   try {
     if (fs.existsSync(cachePath)) {
       return JSON.parse(fs.readFileSync(cachePath, 'utf-8'))
@@ -95,11 +93,11 @@ function loadCache(rootDir: string): HashCache {
   } catch {
     // Ignore cache errors
   }
-  return { version: '1', components: {} }
+  return { version: CACHE.VERSION, components: {} }
 }
 
 function saveCache(rootDir: string, cache: HashCache): void {
-  const cachePath = path.join(rootDir, CACHE_FILE)
+  const cachePath = path.join(rootDir, CACHE.FILENAME)
   try {
     fs.writeFileSync(cachePath, JSON.stringify(cache, null, 2))
   } catch {
@@ -123,19 +121,19 @@ function hashFile(filePath: string): string {
 function getStoryPath(componentPath: string): string {
   const dir = path.dirname(componentPath)
   const basename = path.basename(componentPath, path.extname(componentPath))
-  return path.join(dir, `${basename}.stories.tsx`)
+  return path.join(dir, `${basename}${FILE_EXTENSIONS.STORY_TSX}`)
 }
 
 function getTestPath(componentPath: string): string {
   const dir = path.dirname(componentPath)
   const basename = path.basename(componentPath, path.extname(componentPath))
-  return path.join(dir, `${basename}.test.tsx`)
+  return path.join(dir, `${basename}${FILE_EXTENSIONS.TEST_TSX}`)
 }
 
 function getDocsPath(componentPath: string): string {
   const dir = path.dirname(componentPath)
   const basename = path.basename(componentPath, path.extname(componentPath))
-  return path.join(dir, `${basename}.mdx`)
+  return path.join(dir, `${basename}${FILE_EXTENSIONS.MDX}`)
 }
 
 function fileExists(rootDir: string, relativePath: string): boolean {
@@ -175,7 +173,7 @@ export async function initializeComponents(
 
   // Load cache for change detection
   const cache = loadCache(config.rootDir)
-  const newCache: HashCache = { version: '1', components: {} }
+  const newCache: HashCache = { version: CACHE.VERSION, components: {} }
 
   // Scan all components
   let components = await scanComponents(config, { library })

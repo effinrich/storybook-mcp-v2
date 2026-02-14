@@ -13,6 +13,7 @@ import type {
   PropDefinition,
 } from '../types.js'
 import { toKebabCase } from './scanner.js'
+import { FILE_EXTENSIONS, DIRECTORIES } from './constants.js'
 
 /**
  * Generate a story file for a component
@@ -505,7 +506,7 @@ function buildResponsiveStories(analysis: ComponentAnalysis): string {
 function buildStoryPath(componentPath: string): string {
   const dir = path.dirname(componentPath)
   const basename = path.basename(componentPath, path.extname(componentPath))
-  return path.join(dir, `${basename}.stories.tsx`)
+  return path.join(dir, `${basename}${FILE_EXTENSIONS.STORY_TSX}`)
 }
 
 /**

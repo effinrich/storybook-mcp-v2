@@ -5,6 +5,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import { THRESHOLDS } from './constants.js'
 
 // ===========================================
 // Types
@@ -669,7 +670,7 @@ export async function runSetup(
     const content = fs.readFileSync(legacyPreviewPath, 'utf-8').trim()
     const hasJsx = /<\w+[\s/>]/.test(content) || content.includes('JSX')
     const isEmpty = content.length === 0
-    const isMinimal = content.length < 50 // Nearly empty / boilerplate only
+    const isMinimal = content.length < THRESHOLDS.EMPTY_FILE_SIZE // Nearly empty / boilerplate only
 
     if (isEmpty || isMinimal) {
       // Empty or minimal — replace with generated preview.tsx

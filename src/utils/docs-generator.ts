@@ -11,6 +11,7 @@ import type {
   PropDefinition,
 } from '../types.js'
 import { toKebabCase } from './scanner.js'
+import { FILE_EXTENSIONS } from './constants.js'
 
 export interface GeneratedDocs {
   content: string
@@ -498,8 +499,7 @@ Use Tailwind responsive prefixes:
 
 \`\`\`tsx
 <${name}
-  ${sizeProp ? `className="${size1} md:${size2}"` : ''}
-  className="w-full md:w-auto"
+  className="${sizeProp ? `${size1} md:${size2} ` : ''}w-full md:w-auto"
 >
   Responsive ${name}
 </${name}>
@@ -541,7 +541,7 @@ Use CSS media queries for responsive behavior:
 function buildDocsPath(componentPath: string): string {
   const dir = path.dirname(componentPath)
   const basename = path.basename(componentPath, path.extname(componentPath))
-  return path.join(dir, `${basename}.mdx`)
+  return path.join(dir, `${basename}${FILE_EXTENSIONS.MDX}`)
 }
 
 /**

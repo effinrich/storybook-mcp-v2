@@ -10,6 +10,7 @@ import type {
   ComponentAnalysis,
 } from '../types.js'
 import { toKebabCase } from './scanner.js'
+import { FILE_EXTENSIONS } from './constants.js'
 
 export interface GeneratedTest {
   content: string
@@ -75,8 +76,9 @@ test.describe('${name}', () => {
   })
 
   test('renders correctly', async ({ page }) => {
-    // Use semantic queries or wait for root element
-    ${hasChildren ? `await expect(page.getByText(/content|click|example/i).first()).toBeVisible()` : `const root = page.locator('#storybook-root > *').first()\n    await expect(root).toBeVisible()`}
+    // Wait for component to render
+    const component = page.locator('#storybook-root > *').first()
+    await expect(component).toBeVisible()
   })
 `
 
@@ -109,8 +111,8 @@ ${sizeProp.controlOptions.map(s => `    await expect(page.getByText('${s}')).toB
   if (eventProps.length > 0 && hasChildren) {
     content += `
   test('handles interactions', async ({ page }) => {
-    // Use text content or role for interaction
-    const element = page.getByText(/content|click|example/i).first()
+    // Target the component
+    const element = page.locator('#storybook-root > *').first()
 
     // Click interaction
     await element.click()
@@ -362,7 +364,7 @@ describe('${name}', () => {
 function buildTestPath(componentPath: string): string {
   const dir = path.dirname(componentPath)
   const basename = path.basename(componentPath, path.extname(componentPath))
-  return path.join(dir, `${basename}.test.tsx`)
+  return path.join(dir, `${basename}${FILE_EXTENSIONS.TEST_TSX}`)
 }
 
 /**

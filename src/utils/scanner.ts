@@ -13,6 +13,7 @@ import type {
   PropDefinition,
   DependencyInfo,
 } from '../types.js'
+import { NON_COMPONENT_FILES, THRESHOLDS, FILE_EXTENSIONS, STORY_SEARCH_PATHS } from './constants.js'
 
 /**
  * Scan for all components in configured libraries
@@ -108,7 +109,7 @@ export async function analyzeComponent(
     props,
     dependencies,
     suggestions,
-    sourcePreview: source.slice(0, 1000) + (source.length > 1000 ? '\n// ...' : ''),
+    sourcePreview: source.slice(0, THRESHOLDS.SOURCE_PREVIEW_LENGTH) + (source.length > THRESHOLDS.SOURCE_PREVIEW_LENGTH ? '\n// ...' : ''),
   }
 }
 
@@ -125,7 +126,7 @@ function extractComponentName(filePath: string): string | null {
   }
   
   // Skip common non-component files
-  if (['types', 'utils', 'hooks', 'constants', 'styles'].includes(basename.toLowerCase())) {
+  if (NON_COMPONENT_FILES.includes(basename.toLowerCase() as any)) {
     return null
   }
   
@@ -140,10 +141,11 @@ function findStoryFile(rootDir: string, componentPath: string): string | null {
   const basename = path.basename(componentPath, path.extname(componentPath))
   
   const possiblePaths = [
-    path.join(dir, `${basename}.stories.tsx`),
-    path.join(dir, `${basename}.stories.ts`),
-    path.join(dir, 'stories', `${basename}.stories.tsx`),
-    path.join(dir, '__stories__', `${basename}.stories.tsx`),
+    path.join(dir, `${basename}${FILE_EXTENSIONS.STORY_TSX}`),
+    path.join(dir, `${basename}${FILE_EXTENSIONS.STORY_TS}`),
+    ...STORY_SEARCH_PATHS.slice(1).map(subdir =>
+      path.join(dir, subdir, `${basename}${FILE_EXTENSIONS.STORY_TSX}`)
+    ),
   ]
   
   for (const storyPath of possiblePaths) {
@@ -338,7 +340,7 @@ function extractNotableImports(source: string): string[] {
     }
   }
   
-  return [...new Set(imports)].slice(0, 10) // Limit to 10
+  return [...new Set(imports)].slice(0, THRESHOLDS.MAX_NOTABLE_IMPORTS)
 }
 
 /**
