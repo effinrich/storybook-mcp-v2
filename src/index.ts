@@ -328,6 +328,7 @@ export function createStorybookMCPServer(config: StorybookMCPConfig) {
     try {
       let result: unknown
 
+      // Type-narrowed argument handling - using 'as any' due to MCP SDK's loose JSON-RPC typing
       switch (name) {
         case 'list_components':
           result = await listComponents(config, args as any)
