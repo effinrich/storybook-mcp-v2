@@ -13,3 +13,6 @@ pnpm-debug.log
 # Private scripts (license generation, etc.)
 scripts/
 pro-keys.md
+
+# MCP cache
+.storybook-mcp-cache.json

@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.8.7] - 2026-02-13
+
+### Fixed
+- **Free tier sync limit was never enforced** — free users got unlimited Pro features since launch. Now correctly capped at 5 components.
+- Free tier no longer generates tests or docs in CLI startup path
+- Stale upgrade URL in initializer ("coming soon" → Polar checkout link)
+- Playwright tests no longer generated when `@playwright/test` isn't installed
+- Generated tests now wrap in correct framework provider (Chakra/Gluestack/Tamagui)
+
+### Added
+- `POLAR_UPGRADE_URL` centralized in `src/utils/constants.ts`
+- `POLAR_API_URL` env var for switching between sandbox/production Polar APIs
+- `test` and `test:watch` scripts in package.json
+- 124 passing tests across 10 test files
+
+### Changed
+- SB10-only — dropped all pre-SB10 compatibility code
+- `tags: []` default (prevents duplicate pages with explicit MDX docs)
+- MDX imports from `@storybook/addon-docs/blocks`
+- `<ArgTypes of={Stories}>` pattern (reference stories file, not component)
+
 ## [0.7.0] - 2026-02-11
 
 ### Added
