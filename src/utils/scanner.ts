@@ -66,7 +66,7 @@ export async function scanComponents(
         library: lib.name,
         hasStory,
         storyPath: storyPath ?? undefined,
-        exportType: await detectExportType(path.join(config.rootDir, fullPath)),
+        exportType: detectExportType(path.join(config.rootDir, fullPath)),
       })
     }
   }
@@ -96,7 +96,7 @@ export async function analyzeComponent(
   const props = extractProps(source, componentName)
   const dependencies = analyzeDependencies(source)
   const suggestions = generateSuggestions(props, dependencies, !!storyPath)
-  const exportType = await detectExportType(fullPath)
+  const exportType = detectExportType(fullPath)
 
   return {
     name: componentName,
@@ -168,17 +168,36 @@ function findLibraryForPath(
 
 /**
  * Detect if component uses default or named export
+ * Handles various export patterns:
+ * - export default Button
+ * - export { default as Button }
+ * - export { Button } (named)
+ * - export function Button() (named)
  */
-async function detectExportType(filePath: string): Promise<'default' | 'named'> {
+function detectExportType(filePath: string): 'default' | 'named' {
   try {
     const source = fs.readFileSync(filePath, 'utf-8')
-    
-    if (source.includes('export default')) {
-      return 'default'
+
+    // Remove comments to avoid false positives
+    const cleanSource = source
+      .replace(/\/\*[\s\S]*?\*\//g, '') // Block comments
+      .replace(/\/\/.*/g, '') // Line comments
+
+    // Check for default export patterns
+    const defaultExportPatterns = [
+      /export\s+default\s+/,                    // export default Button
+      /export\s*\{\s*default\s+as\s+\w+\s*\}/, // export { default as Button }
+    ]
+
+    for (const pattern of defaultExportPatterns) {
+      if (pattern.test(cleanSource)) {
+        return 'default'
+      }
     }
-    
+
     return 'named'
   } catch {
+    // Default to named export on error (safer assumption)
     return 'named'
   }
 }
