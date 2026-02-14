@@ -1198,7 +1198,7 @@ export const Loading: Story = {
     msw: {
       handlers: [
         http.get('/api/users', async () => {
-          await new Promise((r) => setTimeout(r, 999999))
+          await new Promise((r) => setTimeout(r, 5000))
           return HttpResponse.json({})
         }),
       ],
