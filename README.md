@@ -4,7 +4,7 @@
 
 **⚡ Pro License — $49 lifetime** | Unlimited sync • All templates • Test & docs generation
 
-[**Get Pro →**](https://buy.polar.sh/polar_cl_Tnd3ryKUJpYPnXF0kBW1KFHQnoLlxAq2cz9GL3Et0dV) · [npm](https://npmjs.com/package/forgekit-storybook-mcp) · [Docs](https://forgekit.cloud/storybook-mcp)
+[**Get Pro →**](https://buy.polar.sh/polar_cl_Tnd3ryKUJpYPnXF0kBW1KFHQnoLlxAq2cz9GL3Et0dV) · [npm](https://npmjs.com/package/forgekit-storybook-mcp) · [GitHub](https://github.com/effinrich/storybook-mcp-v2)
 
 [![npm version](https://img.shields.io/npm/v/forgekit-storybook-mcp)](https://npmjs.com/package/forgekit-storybook-mcp)
 [![downloads](https://img.shields.io/npm/dm/forgekit-storybook-mcp)](https://npmjs.com/package/forgekit-storybook-mcp)
@@ -15,7 +15,7 @@
 
 A **Model Context Protocol (MCP) server** for Storybook story generation, component analysis, and validation.
 
-**Framework-agnostic** - works with Chakra UI, shadcn/ui, Tamagui, Gluestack UI, React Native, or vanilla React.
+**Auto-detects** Chakra UI, shadcn/ui, Tamagui, and Gluestack UI. Works with any React project — unrecognized frameworks use vanilla defaults.
 
 ---
 
@@ -44,7 +44,7 @@ npm install forgekit-storybook-mcp
 
 # 2. Add to your MCP client config (see "MCP Client Setup" section)
 
-# 3. That's it! The MCP will auto-detect your components and framework
+# 3. Add to your MCP client (see MCP Client Setup below)
 ```
 
 ---
@@ -61,7 +61,7 @@ If you don't have Storybook yet:
 npx storybook@latest init
 ```
 
-This scaffolds the `.storybook/` config directory, installs core packages, and adds example stories. **Minimum supported version: Storybook 7.** Version 8+ recommended.
+This scaffolds the `.storybook/` config directory, installs core packages, and adds example stories. **Requires Storybook 10+.** Earlier versions are not supported.
 
 ### Required Packages
 
@@ -83,7 +83,7 @@ Some templates and features work best with these addons installed:
 
 | Addon | Used By | Install |
 |-------|---------|---------|
-| `@storybook/test` | Interactive templates, play functions | `npm i -D @storybook/test` |
+| `storybook/test` | Interactive templates, play functions | Included with `storybook@10+` |
 | `@storybook/addon-a11y` | Accessibility story generation | `npm i -D @storybook/addon-a11y` |
 | `msw` + `msw-storybook-addon` | `with-msw` template | `npm i -D msw msw-storybook-addon` |
 | `@storybook/addon-interactions` | Interaction testing panel | `npm i -D @storybook/addon-interactions` |
@@ -141,15 +141,17 @@ Add to `storybook-mcp.config.json`:
 
 ```json
 {
-  "licenseKey": "FORGE-PRO-XXXX-XXXX"
+  "licenseKey": "your-polar-license-key"
 }
 ```
 
 **Option 2: Environment variable**
 
 ```bash
-export STORYBOOK_MCP_LICENSE=FORGE-PRO-XXXX-XXXX
+export STORYBOOK_MCP_LICENSE=your-polar-license-key
 ```
+
+License keys are UUID format, issued by Polar.sh when you purchase.
 
 ---
 
@@ -225,21 +227,21 @@ Add a `storybook-mcp` field to your `package.json`:
 If no config is found, the MCP will auto-detect:
 
 - **Component directories**: `src/components`, `libs/ui/src`, `packages/ui/src`, etc.
-- **Framework**: Detected from your `package.json` dependencies (Chakra, shadcn, Tamagui, Gluestack, React Native)
+- **Framework**: Detected from your `package.json` dependencies (Chakra, shadcn, Tamagui, Gluestack)
 
 ### Configuration Reference
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `rootDir` | `string` | Auto-detected | Project root directory |
-| `framework` | `string` | `'vanilla'` | UI framework: `'chakra'`, `'shadcn'`, `'tamagui'`, `'gluestack'`, `'react-native'`, `'vanilla'`, `'custom'` |
+| `framework` | `string` | `'vanilla'` | UI framework: `'chakra'`, `'shadcn'`, `'tamagui'`, `'gluestack'`, `'vanilla'` |
 | `libraries` | `array` | `[]` | Component library locations (see below) |
 | `storyFilePattern` | `string` | `'**/*.stories.{ts,tsx}'` | Glob pattern for story files |
 | `componentPatterns` | `string[]` | `['**/src/**/*.tsx', '!**/*.stories.tsx', '!**/*.test.tsx']` | Glob patterns for component files |
 | `excludePatterns` | `string[]` | `['**/node_modules/**', '**/dist/**']` | Directories to exclude |
 | `licenseKey` | `string` | - | Pro license key |
 | `templatesDir` | `string` | - | Custom templates directory |
-| `storybookVersion` | `10` | Storybook version |
+| `storybookVersion` | `number` | `10` | Storybook version (10+ required) |
 
 ### Library Configuration
 
@@ -362,7 +364,7 @@ Add to `claude_desktop_config.json`:
 | [`list_components`](#list_components) | List all React components, filter by library or story status |
 | [`analyze_component`](#analyze_component) | Extract props, dependencies, and get story suggestions |
 | [`generate_story`](#generate_story) | Generate complete story files with variants and tests |
-| [`generate_test`](#generate_test) | Generate Playwright/Vitest test files (Pro) |
+| [`generate_test`](#generate_test) | Generate test files — vitest by default, Playwright if installed (Pro) |
 | [`generate_docs`](#generate_docs) | Generate MDX documentation (Pro) |
 | [`validate_story`](#validate_story) | Check stories for best practices and issues |
 | [`sync_all`](#sync_all) | Sync all components at once |
@@ -594,7 +596,7 @@ Generate a Storybook story file for a component.
 ```json
 {
   "story": {
-    "content": "import type { Meta, StoryObj } from '@storybook/react'\nimport { Button } from './Button'\n\nconst meta: Meta<typeof Button> = {\n  title: 'UI/Button',\n  component: Button,\n  tags: ['autodocs'],\n  ...\n}\n\nexport default meta\ntype Story = StoryObj<typeof Button>\n\nexport const Default: Story = { ... }\nexport const Sizes: Story = { ... }\nexport const Variants: Story = { ... }",
+    "content": "import type { Meta, StoryObj } from '@storybook/react'\nimport { Button } from './Button'\n\nconst meta: Meta<typeof Button> = {\n  title: 'Components/Button',\n  component: Button,\n  tags: [],\n  ...\n}\n\nexport default meta\ntype Story = StoryObj<typeof Button>\n\nexport const Default: Story = { ... }\nexport const Sizes: Story = { ... }\nexport const Variants: Story = { ... }",
     "filePath": "libs/ui/src/button/button.stories.tsx",
     "imports": ["@storybook/react", "./Button"],
     "stories": ["Default", "Sizes", "Variants", "ClickTest"],
@@ -610,7 +612,7 @@ Generate a Storybook story file for a component.
 
 ### `generate_test`
 
-Generate a Playwright/Vitest test file for a component. **(Pro only)**
+Generate a test file for a component. Uses vitest + @testing-library by default. Uses Playwright only if `@playwright/test` is in your project's dependencies. **(Pro only)**
 
 **Parameters:**
 
@@ -646,7 +648,7 @@ Generate a Playwright/Vitest test file for a component. **(Pro only)**
 ```json
 {
   "test": {
-    "content": "import { test, expect } from '@playwright/experimental-ct-react'\nimport { Button } from './Button'\n\ntest('renders correctly', async ({ mount }) => {\n  const component = await mount(<Button>Click me</Button>)\n  await expect(component).toBeVisible()\n})\n...",
+    "content": "import { describe, it, expect } from 'vitest'\nimport { render, screen } from '@testing-library/react'\nimport { Button } from './Button'\n\ndescribe('Button', () => {\n  it('renders correctly', () => {\n    render(<Button>Click me</Button>)\n    expect(screen.getByText('Click me')).toBeInTheDocument()\n  })\n})\n...",
     "filePath": "libs/ui/src/button/button.test.tsx"
   },
   "written": true,
@@ -689,7 +691,7 @@ Generate MDX documentation for a component. **(Pro only)**
 ```json
 {
   "docs": {
-    "content": "import { Meta, Story, Canvas, ArgsTable } from '@storybook/blocks'\nimport * as ButtonStories from './button.stories'\n\n<Meta of={ButtonStories} />\n\n# Button\n\nA flexible button component with multiple variants and sizes.\n\n## Usage\n\n```tsx\nimport { Button } from '@ui/button'\n\n<Button variant=\"solid\" size=\"md\">Click me</Button>\n```\n\n## Props\n\n<ArgsTable of={ButtonStories} />\n...",
+    "content": "import { Canvas, Meta, ArgTypes } from '@storybook/addon-docs/blocks'\nimport * as ButtonStories from './Button.stories'\n\n<Meta of={ButtonStories} />\n\n# Button\n\n## Usage\n\n<Canvas of={ButtonStories.Default} />\n\n## Props\n\n<ArgTypes of={ButtonStories} />\n...",
     "filePath": "libs/ui/src/button/button.mdx"
   },
   "written": true,
@@ -734,15 +736,7 @@ Validate an existing story file for best practices and issues.
         "fix": "Add 'title' property to meta object"
       }
     ],
-    "warnings": [
-      {
-        "type": "warning",
-        "code": "NO_AUTODOCS",
-        "message": "Story doesn't have 'autodocs' tag",
-        "line": 8,
-        "fix": "Add tags: ['autodocs'] to meta"
-      }
-    ],
+    "warnings": [],
     "suggestions": [
       {
         "type": "suggestion",
@@ -826,11 +820,7 @@ Sync all components - create missing stories/tests/docs and update changed ones.
     "tests": 2,
     "docs": 3
   },
-  "skipped": {
-    "stories": 13,
-    "tests": 14,
-    "docs": 13
-  },
+  "skipped": 0,
   "errors": [],
   "summary": "Synced 24 components: Created 8 stories, 8 tests, 8 docs. Updated 8 files."
 }
@@ -927,7 +917,7 @@ Get a specific template by name.
     "name": "with-msw",
     "description": "Story with MSW API mocking",
     "useCase": "Components that fetch data and need mocked API responses",
-    "content": "import type { Meta, StoryObj } from '@storybook/react'\nimport { http, HttpResponse } from 'msw'\nimport { {{ComponentName}} } from './{{ComponentName}}'\n\nconst meta: Meta<typeof {{ComponentName}}> = {\n  title: 'Components/{{ComponentName}}',\n  component: {{ComponentName}},\n  tags: ['autodocs'],\n}\n\nexport default meta\ntype Story = StoryObj<typeof {{ComponentName}}>\n\nexport const Default: Story = {\n  parameters: {\n    msw: {\n      handlers: [\n        http.get('/api/data', () => {\n          return HttpResponse.json({\n            items: [\n              { id: 1, name: 'Item 1' },\n            ],\n          })\n        }),\n      ],\n    },\n  },\n}\n...",
+    "content": "import type { Meta, StoryObj } from '@storybook/react'\nimport { http, HttpResponse } from 'msw'\nimport { {{ComponentName}} } from './{{ComponentName}}'\n\nconst meta: Meta<typeof {{ComponentName}}> = {\n  title: 'Components/{{ComponentName}}',\n  component: {{ComponentName}},\n  tags: [],\n}\n\nexport default meta\ntype Story = StoryObj<typeof {{ComponentName}}>\n\nexport const Default: Story = {\n  parameters: {\n    msw: {\n      handlers: [\n        http.get('/api/data', () => {\n          return HttpResponse.json({\n            items: [\n              { id: 1, name: 'Item 1' },\n            ],\n          })\n        }),\n      ],\n    },\n  },\n}\n...",
     "placeholders": ["ComponentName", "component-name"]
   },
   "usage": "Replace placeholders: ComponentName, component-name"
@@ -1140,7 +1130,7 @@ import { Button } from './Button'
 const meta: Meta<typeof Button> = {
   title: 'Components/Button',
   component: Button,
-  tags: ['autodocs'],
+  tags: [],
 }
 
 export default meta
@@ -1232,7 +1222,7 @@ export const Error: Story = {
 **`interactive`** - Play function tests:
 
 ```tsx
-import { expect, userEvent, within } from '@storybook/test'
+import { expect, userEvent, within } from 'storybook/test'
 
 export const ClickTest: Story = {
   args: { children: 'Click me' },
