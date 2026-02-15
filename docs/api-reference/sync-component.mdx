@@ -1,0 +1,56 @@
+---
+title: 'sync_component'
+description: 'Sync a single component's story/test/docs'
+---
+
+
+## Overview
+
+Sync a single component's story/test/docs
+
+## Parameters
+
+<ParamField path="componentPath" type="string" required>
+  Path to the component file
+</ParamField>
+
+<ParamField path="generateStories" type="boolean" default="true">
+  Generate story file
+</ParamField>
+
+<ParamField path="generateTests" type="boolean" default="true">
+  Generate test file (Pro only)
+</ParamField>
+
+<ParamField path="generateDocs" type="boolean" default="true">
+  Generate MDX docs (Pro only)
+</ParamField>
+
+<ParamField path="dryRun" type="boolean" default="false">
+  Preview without writing to disk
+</ParamField>
+
+## Examples
+
+<CodeGroup>
+```json Basic Usage
+{
+  "componentPath": "example/path"
+}
+```
+</CodeGroup>
+
+## Response
+
+Response structure varies by tool. See the full API documentation for details.
+
+## Related Tools
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="code" href="/api-reference/overview">
+    View all available tools
+  </Card>
+  <Card title="Quickstart" icon="play" href="/quickstart">
+    Get started guide
+  </Card>
+</CardGroup>

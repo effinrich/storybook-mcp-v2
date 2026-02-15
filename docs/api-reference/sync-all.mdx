@@ -1,0 +1,60 @@
+---
+title: 'sync_all'
+description: 'Sync all components at once'
+---
+
+
+## Overview
+
+Sync all components at once
+
+## Parameters
+
+<ParamField path="library" type="string" default="all">
+  Only sync components in this library
+</ParamField>
+
+<ParamField path="generateStories" type="boolean" default="true">
+  Generate story files
+</ParamField>
+
+<ParamField path="generateTests" type="boolean" default="true">
+  Generate test files (Pro only)
+</ParamField>
+
+<ParamField path="generateDocs" type="boolean" default="true">
+  Generate MDX docs (Pro only)
+</ParamField>
+
+<ParamField path="updateExisting" type="boolean" default="true">
+  Update files when components change
+</ParamField>
+
+<ParamField path="dryRun" type="boolean" default="false">
+  Preview without writing to disk
+</ParamField>
+
+## Examples
+
+<CodeGroup>
+```json Basic Usage
+{
+  
+}
+```
+</CodeGroup>
+
+## Response
+
+Response structure varies by tool. See the full API documentation for details.
+
+## Related Tools
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="code" href="/api-reference/overview">
+    View all available tools
+  </Card>
+  <Card title="Quickstart" icon="play" href="/quickstart">
+    Get started guide
+  </Card>
+</CardGroup>

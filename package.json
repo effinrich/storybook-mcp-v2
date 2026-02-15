@@ -1,6 +1,6 @@
 {
   "name": "forgekit-storybook-mcp",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "description": "MCP server for Storybook story generation, component analysis, and validation",
   "author": "Rich Tillman <richtillman@gmail.com>",
   "license": "MIT",
@@ -28,6 +28,8 @@
     "prepublishOnly": "npm run build",
     "dev": "tsup src/index.ts src/cli.ts --format esm --watch",
     "start": "node dist/cli.js",
+    "docs:generate": "tsx scripts/generate-docs.ts",
+    "docs:dev": "mintlify dev",
     "typecheck": "tsc --noEmit",
     "publish:npm": "npm publish --access public",
     "release": "npm run build && npm publish --access public",

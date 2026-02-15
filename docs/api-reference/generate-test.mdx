@@ -1,0 +1,50 @@
+---
+title: 'generate_test'
+description: 'Generate test files — vitest by default, Playwright if installed'
+---
+
+
+<Note>This tool requires a Pro license</Note>
+
+## Overview
+
+Generate test files — vitest by default, Playwright if installed
+
+## Parameters
+
+<ParamField path="componentPath" type="string" required>
+  Path to the component file
+</ParamField>
+
+<ParamField path="overwrite" type="boolean" default="false">
+  Replace existing test file
+</ParamField>
+
+<ParamField path="dryRun" type="boolean" default="false">
+  Preview without writing to disk
+</ParamField>
+
+## Examples
+
+<CodeGroup>
+```json Basic Usage
+{
+  "componentPath": "example/path"
+}
+```
+</CodeGroup>
+
+## Response
+
+Response structure varies by tool. See the full API documentation for details.
+
+## Related Tools
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="code" href="/api-reference/overview">
+    View all available tools
+  </Card>
+  <Card title="Quickstart" icon="play" href="/quickstart">
+    Get started guide
+  </Card>
+</CardGroup>
