@@ -69,6 +69,21 @@ A **Model Context Protocol (MCP) server** for Storybook story generation, compon
 
 ---
 
+## 🎉 What's New in v0.10
+
+> **We've listened to your feedback!** Here's what's improved:
+
+- ✅ **Storybook 10.2+ support** — Latest version with Vitest addon integration
+- ✅ **Better Windows compatibility** — Fixed PATH issues with npm scripts
+- ✅ **Comprehensive documentation** — 33 pages on [forgekit.cloud](https://forgekit.cloud) covering all features
+- ✅ **Type safety improvements** — Cleaner code, better error messages
+- ✅ **Framework detection fixes** — More reliable auto-detection for Chakra, shadcn, Tamagui
+- ✅ **Improved story generation** — Smarter play functions, better accessibility testing
+
+**Upgrading from 0.8.x?** Check the [CHANGELOG](./CHANGELOG.md) for breaking changes.
+
+---
+
 ## Table of Contents
 
 - [Quick Start](#quick-start)
