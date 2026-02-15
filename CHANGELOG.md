@@ -4,6 +4,72 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Test configuration** — Updated Vitest config with proper environment settings
+- **TypeScript module resolution** — Changed from "bundler" to "node" for better compatibility
+
+### Verified
+
+- **Framework-specific docs generation** — Confirmed all frameworks (Chakra, Tamagui, Gluestack, shadcn, vanilla) have proper composition and responsive examples
+- **Component-level framework detection** — Verified shadcn and Tamagui detection works at component level via import analysis
+- **MSW template timeout** — Confirmed using proper 5000ms timeout (not 999999ms)
+- **Form template flexibility** — Confirmed template has proper customization comments, no hardcoded prop assumptions
+
+## [0.10.0] - 2026-02-15
+
+### Breaking Changes
+
+- **Minimum Storybook version now 10.2+** — older versions no longer supported
+- **Minimum Node.js version now 20+** — aligns with Storybook 10.2 requirements
+
+### Added
+
+- **Vitest addon integration** — auto-configured for Vite-based projects (Storybook 10.2+ recommendation)
+- Vitest addon automatically added to `.storybook/main.ts` for Vite projects
+- Webpack projects continue using `@storybook/test-runner`
+
+### Changed
+
+- **Upgraded all Storybook dependencies to ^10.2.0** for latest features and fixes
+- Updated README with Storybook 10.2+ requirements and installation instructions
+- Package.json scripts now use `npx` for better Windows compatibility
+- All generated configs target Storybook 10.2+ exclusively
+
+### Fixed
+
+- **Type safety improvements** — removed unnecessary `as any` casts in scanner and setup utilities
+- Windows PATH issues with build scripts resolved
+
+## [0.9.4] - 2026-02-15
+
+### Changed
+
+- **GitHub organization migrated** to `the-single-gentlemans-club/storybook-mcp`
+- Updated all repository URLs in package.json and documentation
+- Git remote configuration updated for new organization
+
+### Fixed
+
+- **Type safety in MCP tool arguments** — explicit typed objects replace inline assertions
+- Better error handling for tool argument validation
+
+## [0.9.3] - 2026-02-15
+
+### Added
+
+- **Comprehensive Mintlify documentation** — 33 pages covering all features
+- Complete API reference for all 12 MCP tools
+- Framework-specific guides (Chakra UI, shadcn/ui, Tamagui, Gluestack UI, React Native)
+- MCP client setup guides (Cursor, Claude Desktop, Programmatic)
+- 7 story template documentation pages with examples
+- License and pricing documentation
+
+### Fixed
+
+- **Documentation generator** — auto-generates MDX docs for all components
+- Regex pattern improvements using modern `matchAll()` instead of `exec()` loops
+
 ## [0.8.7] - 2026-02-13
 
 ### Fixed
