@@ -4,10 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-02-15
+
 ### Fixed
 
-- **Test configuration** — Updated Vitest config with proper environment settings
-- **TypeScript module resolution** — Changed from "bundler" to "node" for better compatibility
+- **Test suite configuration** — Downgraded from Vitest 4.0.18 to 3.2.4 to resolve "failed to find the runner" errors
+- **Router dependency detection** — Added `react-router-dom` to router package detection (previously only detected `react-router`)
+- **TypeScript module resolution** — Changed from "bundler" to "node" for better Node.js compatibility
+- **Test environment** — Added Vite 5.x as explicit peer dependency for Vitest
+- **100% test coverage** — All 124 tests now passing
 
 ### Verified
 
