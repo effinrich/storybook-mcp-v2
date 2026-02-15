@@ -11,9 +11,14 @@ import type {
   ComponentInfo,
   ComponentAnalysis,
   PropDefinition,
-  DependencyInfo,
+  DependencyInfo
 } from '../types.js'
-import { NON_COMPONENT_FILES, THRESHOLDS, FILE_EXTENSIONS, STORY_SEARCH_PATHS } from './constants.js'
+import {
+  NON_COMPONENT_FILES,
+  THRESHOLDS,
+  FILE_EXTENSIONS,
+  STORY_SEARCH_PATHS
+} from './constants.js'
 import { FileSystemError, ErrorCode } from './errors.js'
 
 /**
@@ -30,12 +35,16 @@ export async function scanComponents(
 
   for (const lib of config.libraries) {
     // Skip if filtering by library and this isn't it
-    if (options?.library && options.library !== 'all' && options.library !== lib.name) {
+    if (
+      options?.library &&
+      options.library !== 'all' &&
+      options.library !== lib.name
+    ) {
       continue
     }
 
     const libPath = path.join(config.rootDir, lib.path)
-    
+
     if (!fs.existsSync(libPath)) {
       continue
     }
@@ -44,13 +53,13 @@ export async function scanComponents(
     const componentFiles = await fg(config.componentPatterns, {
       cwd: libPath,
       ignore: config.excludePatterns,
-      absolute: false,
+      absolute: false
     })
 
     for (const file of componentFiles) {
       const fullPath = path.join(lib.path, file)
       const componentName = extractComponentName(file)
-      
+
       if (!componentName) continue
 
       // Check for story file
@@ -68,7 +77,7 @@ export async function scanComponents(
         library: lib.name,
         hasStory,
         storyPath: storyPath ?? undefined,
-        exportType: detectExportType(path.join(config.rootDir, fullPath)),
+        exportType: detectExportType(path.join(config.rootDir, fullPath))
       })
     }
   }
@@ -84,7 +93,7 @@ export async function analyzeComponent(
   componentPath: string
 ): Promise<ComponentAnalysis> {
   const fullPath = path.join(config.rootDir, componentPath)
-  
+
   if (!fs.existsSync(fullPath)) {
     throw new FileSystemError(
       `Component not found: ${componentPath}`,
@@ -114,7 +123,9 @@ export async function analyzeComponent(
     props,
     dependencies,
     suggestions,
-    sourcePreview: source.slice(0, THRESHOLDS.SOURCE_PREVIEW_LENGTH) + (source.length > THRESHOLDS.SOURCE_PREVIEW_LENGTH ? '\n// ...' : ''),
+    sourcePreview:
+      source.slice(0, THRESHOLDS.SOURCE_PREVIEW_LENGTH) +
+      (source.length > THRESHOLDS.SOURCE_PREVIEW_LENGTH ? '\n// ...' : '')
   }
 }
 
@@ -123,18 +134,18 @@ export async function analyzeComponent(
  */
 function extractComponentName(filePath: string): string | null {
   const basename = path.basename(filePath, path.extname(filePath))
-  
+
   // Skip index files, look at parent directory
   if (basename === 'index') {
     const parentDir = path.basename(path.dirname(filePath))
     return toPascalCase(parentDir)
   }
-  
+
   // Skip common non-component files
   if (NON_COMPONENT_FILES.includes(basename.toLowerCase() as any)) {
     return null
   }
-  
+
   return toPascalCase(basename)
 }
 
@@ -144,22 +155,22 @@ function extractComponentName(filePath: string): string | null {
 function findStoryFile(rootDir: string, componentPath: string): string | null {
   const dir = path.dirname(componentPath)
   const basename = path.basename(componentPath, path.extname(componentPath))
-  
+
   const possiblePaths = [
     path.join(dir, `${basename}${FILE_EXTENSIONS.STORY_TSX}`),
     path.join(dir, `${basename}${FILE_EXTENSIONS.STORY_TS}`),
     ...STORY_SEARCH_PATHS.slice(1).map(subdir =>
       path.join(dir, subdir, `${basename}${FILE_EXTENSIONS.STORY_TSX}`)
-    ),
+    )
   ]
-  
+
   for (const storyPath of possiblePaths) {
     const fullPath = path.join(rootDir, storyPath)
     if (fs.existsSync(fullPath)) {
       return storyPath
     }
   }
-  
+
   return null
 }
 
@@ -192,8 +203,8 @@ function detectExportType(filePath: string): 'default' | 'named' {
 
     // Check for default export patterns
     const defaultExportPatterns = [
-      /export\s+default\s+/,                    // export default Button
-      /export\s*\{\s*default\s+as\s+\w+\s*\}/, // export { default as Button }
+      /export\s+default\s+/, // export default Button
+      /export\s*\{\s*default\s+as\s+\w+\s*\}/ // export { default as Button }
     ]
 
     for (const pattern of defaultExportPatterns) {
@@ -217,13 +228,13 @@ function extractProps(source: string, componentName: string): PropDefinition[] {
 
   // Try multiple prop naming conventions in order of specificity
   const propPatterns = [
-    `${componentName}Props`,           // ButtonProps (most specific)
-    `${componentName}Properties`,      // ButtonProperties
-    `${componentName}PropTypes`,       // ButtonPropTypes
-    `I${componentName}Props`,          // IButtonProps
-    `Props`,                           // Generic Props
-    `IProps`,                          // Generic IProps
-    `ComponentProps`,                  // Generic ComponentProps
+    `${componentName}Props`, // ButtonProps (most specific)
+    `${componentName}Properties`, // ButtonProperties
+    `${componentName}PropTypes`, // ButtonPropTypes
+    `I${componentName}Props`, // IButtonProps
+    `Props`, // Generic Props
+    `IProps`, // Generic IProps
+    `ComponentProps` // Generic ComponentProps
   ]
 
   let match: RegExpMatchArray | null = null
@@ -251,34 +262,32 @@ function extractProps(source: string, componentName: string): PropDefinition[] {
   }
 
   const propsBlock = match[1]
-  
+
   // Parse each prop
   const propLines = propsBlock.split('\n').filter(line => line.trim())
-  
+
   for (const line of propLines) {
-    const propMatch = line.match(
-      /^\s*\/\*\*([^*]*)\*\/\s*(\w+)(\?)?:\s*(.+?)(?:;|$)/s
-    ) || line.match(
-      /^\s*(\w+)(\?)?:\s*(.+?)(?:;|$)/
-    )
-    
+    const propMatch =
+      line.match(/^\s*\/\*\*([^*]*)\*\/\s*(\w+)(\?)?:\s*(.+?)(?:;|$)/s) ||
+      line.match(/^\s*(\w+)(\?)?:\s*(.+?)(?:;|$)/)
+
     if (propMatch) {
       const hasJsDoc = propMatch.length === 5
       const description = hasJsDoc ? propMatch[1].trim() : undefined
       const name = hasJsDoc ? propMatch[2] : propMatch[1]
       const optional = hasJsDoc ? propMatch[3] === '?' : propMatch[2] === '?'
       const type = hasJsDoc ? propMatch[4].trim() : propMatch[3].trim()
-      
+
       props.push({
         name,
         type,
         required: !optional,
         description,
-        ...inferControlType(type),
+        ...inferControlType(type)
       })
     }
   }
-  
+
   return props
 }
 
@@ -290,46 +299,52 @@ function inferControlType(type: string): Partial<PropDefinition> {
   if (type === 'boolean') {
     return { controlType: 'boolean' }
   }
-  
+
   // Number
   if (type === 'number') {
     return { controlType: 'number' }
   }
-  
+
   // String
   if (type === 'string') {
     return { controlType: 'text' }
   }
-  
+
   // Union of string literals
-  const unionMatch = type.match(/^["']([^"']+)["'](?:\s*\|\s*["']([^"']+)["'])+$|^['"](.+?)['"](?:\s*\|\s*['"](.+?)['"])*$/)
-  if (unionMatch || type.includes("'") && type.includes('|')) {
+  const unionMatch = type.match(
+    /^["']([^"']+)["'](?:\s*\|\s*["']([^"']+)["'])+$|^['"](.+?)['"](?:\s*\|\s*['"](.+?)['"])*$/
+  )
+  if (unionMatch || (type.includes("'") && type.includes('|'))) {
     const options = type
       .split('|')
       .map(s => s.trim().replace(/['"]/g, ''))
       .filter(Boolean)
-    
+
     return {
       controlType: options.length <= 4 ? 'radio' : 'select',
-      controlOptions: options,
+      controlOptions: options
     }
   }
-  
+
   // Color-like props
   if (type.toLowerCase().includes('color') || type.includes('Color')) {
     return { controlType: 'color' }
   }
-  
+
   // Date
   if (type === 'Date' || type.includes('Date')) {
     return { controlType: 'date' }
   }
-  
+
   // Object/complex
-  if (type.startsWith('{') || type.includes('Record') || type.includes('Object')) {
+  if (
+    type.startsWith('{') ||
+    type.includes('Record') ||
+    type.includes('Object')
+  ) {
     return { controlType: 'object' }
   }
-  
+
   return {}
 }
 
@@ -337,8 +352,17 @@ function inferControlType(type: string): Partial<PropDefinition> {
  * Check if source imports from any of the given packages
  */
 function importsFrom(source: string, packages: string[]): boolean {
-  const pattern = packages.map(pkg => pkg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
-  return new RegExp(`from ['"](?:${pattern})`).test(source)
+  const patterns = packages.map(pkg => {
+    const escaped = pkg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    // If package name ends with '-', treat as prefix match (e.g. 'expo-')
+    if (pkg.endsWith('-')) {
+      return escaped
+    }
+    // Otherwise match exact package or subpath (followed by quote or slash)
+    return `${escaped}(?:['"/]|$)`
+  })
+
+  return new RegExp(`from ['"](?:${patterns.join('|')})`).test(source)
 }
 
 /**
@@ -347,8 +371,15 @@ function importsFrom(source: string, packages: string[]): boolean {
  */
 function analyzeDependencies(source: string): DependencyInfo {
   return {
-    usesRouter: importsFrom(source, ['react-router', '@tanstack/react-router', 'next/navigation']),
-    usesReactQuery: importsFrom(source, ['@tanstack/react-query', 'react-query']),
+    usesRouter: importsFrom(source, [
+      'react-router',
+      '@tanstack/react-router',
+      'next/navigation'
+    ]),
+    usesReactQuery: importsFrom(source, [
+      '@tanstack/react-query',
+      'react-query'
+    ]),
     usesChakra: importsFrom(source, ['@chakra-ui']),
     usesShadcn: importsFrom(source, ['@radix-ui', 'class-variance-authority']),
     usesTamagui: importsFrom(source, ['tamagui', '@tamagui']),
@@ -356,11 +387,19 @@ function analyzeDependencies(source: string): DependencyInfo {
     usesReactNative: importsFrom(source, ['react-native', 'expo-']),
     usesEmotion: importsFrom(source, ['@emotion']),
     // Simplified Tailwind detection - check for common utility classes
-    usesTailwind: /className=['"][^'"]*\b(flex|grid|p-\d|m-\d|bg-|text-|w-|h-)/.test(source),
+    usesTailwind:
+      /className=(?:['"]|\{['"]).*?\b(flex|grid|p-\d|m-\d|bg-|text-|w-|h-)/.test(
+        source
+      ),
     usesFramerMotion: importsFrom(source, ['framer-motion']),
     usesMSW: importsFrom(source, ['msw']),
-    usesGlobalState: importsFrom(source, ['zustand', '@reduxjs', 'recoil', 'jotai']),
-    otherImports: extractNotableImports(source),
+    usesGlobalState: importsFrom(source, [
+      'zustand',
+      '@reduxjs',
+      'recoil',
+      'jotai'
+    ]),
+    otherImports: extractNotableImports(source)
   }
 }
 
@@ -370,17 +409,21 @@ function analyzeDependencies(source: string): DependencyInfo {
 function extractNotableImports(source: string): string[] {
   const imports: string[] = []
   const importRegex = /from ['"]([^'"]+)['"]/g
-  let match
-  
-  while ((match = importRegex.exec(source)) !== null) {
+  let match: RegExpExecArray | null = importRegex.exec(source)
+
+  while (match !== null) {
     const pkg = match[1]
     // Skip relative imports and common packages
-    if (!pkg.startsWith('.') && !pkg.startsWith('@types') && 
-        !['react', 'react-dom'].includes(pkg)) {
+    if (
+      !pkg.startsWith('.') &&
+      !pkg.startsWith('@types') &&
+      !['react', 'react-dom'].includes(pkg)
+    ) {
       imports.push(pkg)
     }
+    match = importRegex.exec(source)
   }
-  
+
   return [...new Set(imports)].slice(0, THRESHOLDS.MAX_NOTABLE_IMPORTS)
 }
 
@@ -393,54 +436,72 @@ function generateSuggestions(
   hasStory: boolean
 ): string[] {
   const suggestions: string[] = []
-  
+
   if (hasStory) {
-    suggestions.push('Story already exists - consider adding more variants or interaction tests')
+    suggestions.push(
+      'Story already exists - consider adding more variants or interaction tests'
+    )
   } else {
     suggestions.push('No story found - create one to document this component')
   }
-  
+
   // Props-based suggestions
-  const variantProps = props.filter(p => 
+  const variantProps = props.filter(p =>
     ['variant', 'size', 'color', 'colorScheme'].includes(p.name)
   )
   if (variantProps.length > 0) {
-    suggestions.push(`Add variant stories for: ${variantProps.map(p => p.name).join(', ')}`)
+    suggestions.push(
+      `Add variant stories for: ${variantProps.map(p => p.name).join(', ')}`
+    )
   }
-  
+
   // Dependency-based suggestions
   if (deps.usesRouter) {
-    suggestions.push('Component uses routing - wrap stories with router decorator')
+    suggestions.push(
+      'Component uses routing - wrap stories with router decorator'
+    )
   }
-  
+
   if (deps.usesReactQuery) {
-    suggestions.push('Component uses React Query - wrap stories with QueryClientProvider')
+    suggestions.push(
+      'Component uses React Query - wrap stories with QueryClientProvider'
+    )
   }
-  
+
   if (deps.usesChakra) {
-    suggestions.push('Component uses Chakra UI - ensure ChakraProvider is in decorators')
+    suggestions.push(
+      'Component uses Chakra UI - ensure ChakraProvider is in decorators'
+    )
   }
 
   if (deps.usesGluestack) {
-    suggestions.push('Component uses Gluestack UI - ensure GluestackUIProvider is in decorators')
+    suggestions.push(
+      'Component uses Gluestack UI - ensure GluestackUIProvider is in decorators'
+    )
   }
 
   if (deps.usesReactNative) {
-    suggestions.push('Component uses React Native - ensure stories are configured for on-device or web preview')
+    suggestions.push(
+      'Component uses React Native - ensure stories are configured for on-device or web preview'
+    )
   }
-  
+
   if (deps.usesGlobalState) {
-    suggestions.push('Component uses global state - mock or provide store in stories')
+    suggestions.push(
+      'Component uses global state - mock or provide store in stories'
+    )
   }
-  
+
   // Interactive suggestions
-  const interactiveProps = props.filter(p => 
-    p.name.startsWith('on') && p.type.includes('=>')
+  const interactiveProps = props.filter(
+    p => p.name.startsWith('on') && p.type.includes('=>')
   )
   if (interactiveProps.length > 0) {
-    suggestions.push(`Add interaction tests for: ${interactiveProps.map(p => p.name).join(', ')}`)
+    suggestions.push(
+      `Add interaction tests for: ${interactiveProps.map(p => p.name).join(', ')}`
+    )
   }
-  
+
   return suggestions
 }
 
