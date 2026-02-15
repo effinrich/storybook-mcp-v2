@@ -1,0 +1,533 @@
+---
+title: 'with-msw Template'
+description: 'Mock API requests with Mock Service Worker'
+---
+
+## Overview
+
+The `with-msw` template generates stories with Mock Service Worker (MSW) handlers to mock API requests, perfect for components that fetch data.
+
+**Use this when:**
+- Component fetches data from an API
+- Uses data fetching libraries (SWR, React Query, fetch)
+- Need to test loading, success, error, and empty states
+- Want realistic API mocking without real backend
+
+## Requirements
+
+<Steps>
+  <Step title="Install MSW">
+    ```bash
+    npm install --save-dev msw
+    ```
+  </Step>
+
+  <Step title="Install Storybook MSW Addon">
+    ```bash
+    npm install --save-dev msw-storybook-addon
+    ```
+  </Step>
+
+  <Step title="Initialize MSW">
+    ```bash
+    npx msw init public/
+    ```
+  </Step>
+
+  <Step title="Configure Storybook">
+    Add to `.storybook/preview.ts`:
+
+    ```typescript
+    import { initialize, mswLoader } from 'msw-storybook-addon'
+
+    initialize()
+
+    export const loaders = [mswLoader]
+    ```
+  </Step>
+</Steps>
+
+## Generated Output
+
+```tsx Example
+import type { Meta, StoryObj } from '@storybook/react'
+import { http, HttpResponse, delay } from 'msw'
+import { UserList } from './UserList'
+
+const meta: Meta<typeof UserList> = {
+  title: 'Components/UserList',
+  component: UserList,
+  tags: ['autodocs'],
+}
+
+export default meta
+type Story = StoryObj<typeof UserList>
+
+export const Success: Story = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/users', async () => {
+          await delay(500)
+          return HttpResponse.json([
+            { id: 1, name: 'Alice', email: 'alice@example.com' },
+            { id: 2, name: 'Bob', email: 'bob@example.com' },
+            { id: 3, name: 'Charlie', email: 'charlie@example.com' },
+          ])
+        }),
+      ],
+    },
+  },
+}
+
+export const Loading: Story = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/users', async () => {
+          await delay(5000) // Infinite loading for visual testing
+          return HttpResponse.json([])
+        }),
+      ],
+    },
+  },
+}
+
+export const Error: Story = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/users', async () => {
+          await delay(500)
+          return HttpResponse.json(
+            { error: 'Failed to fetch users' },
+            { status: 500 }
+          )
+        }),
+      ],
+    },
+  },
+}
+
+export const Empty: Story = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/users', async () => {
+          await delay(500)
+          return HttpResponse.json([])
+        }),
+      ],
+    },
+  },
+}
+
+export const SlowNetwork: Story = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/users', async () => {
+          await delay(3000) // 3 second delay
+          return HttpResponse.json([
+            { id: 1, name: 'Alice', email: 'alice@example.com' },
+          ])
+        }),
+      ],
+    },
+  },
+}
+```
+
+## What's Included
+
+<Check>Success state with realistic data</Check>
+<Check>Loading state (long delay)</Check>
+<Check>Error state (500 response)</Check>
+<Check>Empty state (empty array)</Check>
+<Check>Slow network simulation</Check>
+<Check>Automatic API endpoint detection</Check>
+<Check>Realistic delays (500ms default)</Check>
+
+## API Detection
+
+The template automatically detects API calls from your component:
+
+<Tabs>
+  <Tab title="fetch()">
+    ```tsx Component
+    const UserList = () => {
+      const [users, setUsers] = useState([])
+
+      useEffect(() => {
+        fetch('/api/users')
+          .then(res => res.json())
+          .then(setUsers)
+      }, [])
+
+      // ...
+    }
+    ```
+
+    Detects: `GET /api/users`
+  </Tab>
+
+  <Tab title="SWR">
+    ```tsx Component
+    const UserList = () => {
+      const { data, error, isLoading } = useSWR('/api/users', fetcher)
+
+      // ...
+    }
+    ```
+
+    Detects: `GET /api/users`
+  </Tab>
+
+  <Tab title="React Query">
+    ```tsx Component
+    const UserList = () => {
+      const { data, isLoading, error } = useQuery({
+        queryKey: ['users'],
+        queryFn: () => fetch('/api/users').then(r => r.json())
+      })
+
+      // ...
+    }
+    ```
+
+    Detects: `GET /api/users`
+  </Tab>
+
+  <Tab title="Axios">
+    ```tsx Component
+    const UserList = () => {
+      const [users, setUsers] = useState([])
+
+      useEffect(() => {
+        axios.get('/api/users').then(res => setUsers(res.data))
+      }, [])
+
+      // ...
+    }
+    ```
+
+    Detects: `GET /api/users`
+  </Tab>
+</Tabs>
+
+## Response Data Generation
+
+The template generates realistic mock data based on your component's expected response shape:
+
+```tsx
+// If component shows user cards with avatar, name, email
+// Generated mock data:
+[
+  {
+    id: 1,
+    name: 'Alice Johnson',
+    email: 'alice.johnson@example.com',
+    avatar: 'https://i.pravatar.cc/150?img=1'
+  },
+  {
+    id: 2,
+    name: 'Bob Smith',
+    email: 'bob.smith@example.com',
+    avatar: 'https://i.pravatar.cc/150?img=2'
+  }
+]
+```
+
+## Usage
+
+<CodeGroup>
+```json MCP Tool
+{
+  "componentPath": "src/components/UserList.tsx",
+  "template": "with-msw"
+}
+```
+
+```bash CLI
+npx storybook-mcp sync src/components/UserList.tsx --template with-msw
+```
+</CodeGroup>
+
+## Advanced Examples
+
+<Tabs>
+  <Tab title="POST Request">
+    ```tsx
+    export const CreateUser: Story = {
+      parameters: {
+        msw: {
+          handlers: [
+            http.post('/api/users', async ({ request }) => {
+              const newUser = await request.json()
+              await delay(500)
+
+              return HttpResponse.json(
+                {
+                  id: Date.now(),
+                  ...newUser,
+                  createdAt: new Date().toISOString()
+                },
+                { status: 201 }
+              )
+            }),
+          ],
+        },
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="Authentication">
+    ```tsx
+    export const Unauthorized: Story = {
+      parameters: {
+        msw: {
+          handlers: [
+            http.get('/api/users', () => {
+              return HttpResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+              )
+            }),
+          ],
+        },
+      },
+    }
+
+    export const Authenticated: Story = {
+      parameters: {
+        msw: {
+          handlers: [
+            http.get('/api/users', async ({ request }) => {
+              const token = request.headers.get('Authorization')
+
+              if (!token) {
+                return HttpResponse.json(
+                  { error: 'Unauthorized' },
+                  { status: 401 }
+                )
+              }
+
+              return HttpResponse.json([/* users */])
+            }),
+          ],
+        },
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="Pagination">
+    ```tsx
+    export const Paginated: Story = {
+      parameters: {
+        msw: {
+          handlers: [
+            http.get('/api/users', async ({ request }) => {
+              const url = new URL(request.url)
+              const page = Number(url.searchParams.get('page')) || 1
+              const limit = Number(url.searchParams.get('limit')) || 10
+
+              const users = generateMockUsers(100)
+              const start = (page - 1) * limit
+              const end = start + limit
+
+              return HttpResponse.json({
+                data: users.slice(start, end),
+                pagination: {
+                  page,
+                  limit,
+                  total: users.length,
+                  hasMore: end < users.length
+                }
+              })
+            }),
+          ],
+        },
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="GraphQL">
+    ```tsx
+    import { graphql, HttpResponse } from 'msw'
+
+    export const GraphQLSuccess: Story = {
+      parameters: {
+        msw: {
+          handlers: [
+            graphql.query('GetUsers', () => {
+              return HttpResponse.json({
+                data: {
+                  users: [
+                    { id: '1', name: 'Alice' },
+                    { id: '2', name: 'Bob' },
+                  ]
+                }
+              })
+            }),
+          ],
+        },
+      },
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Network Simulation
+
+Test different network conditions:
+
+```tsx
+// Fast 3G
+export const Fast3G: Story = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/users', async () => {
+          await delay(1500) // Typical 3G latency
+          return HttpResponse.json([/* data */])
+        }),
+      ],
+    },
+  },
+}
+
+// Slow connection
+export const SlowConnection: Story = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/users', async () => {
+          await delay(5000) // 5 second delay
+          return HttpResponse.json([/* data */])
+        }),
+      ],
+    },
+  },
+}
+
+// Network timeout
+export const Timeout: Story = {
+  parameters: {
+    msw: {
+      handlers: [
+        http.get('/api/users', async () => {
+          await delay(30000) // Never resolves
+          return HttpResponse.json([])
+        }),
+      ],
+    },
+  },
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion icon="clock" title="Use realistic delays">
+    ```tsx
+    // ✅ Good - realistic API delay
+    await delay(500)
+
+    // ❌ Bad - unrealistic or blocks testing
+    await delay(100) // Too fast
+    await delay(10000) // Too slow
+    ```
+  </Accordion>
+
+  <Accordion icon="database" title="Generate realistic data">
+    Use libraries like Faker.js for realistic mock data:
+
+    ```tsx
+    import { faker } from '@faker-js/faker'
+
+    const users = Array.from({ length: 10 }, (_, i) => ({
+      id: i + 1,
+      name: faker.person.fullName(),
+      email: faker.internet.email(),
+      avatar: faker.image.avatar()
+    }))
+    ```
+  </Accordion>
+
+  <Accordion icon="shield-check" title="Test error states">
+    Don't just test happy path. Include:
+    - 400 errors (validation)
+    - 401 errors (authentication)
+    - 403 errors (authorization)
+    - 404 errors (not found)
+    - 500 errors (server error)
+    - Network failures
+  </Accordion>
+
+  <Accordion icon="route" title="Match production endpoints">
+    Use actual production API paths:
+
+    ```tsx
+    // ✅ Good - matches production
+    http.get('/api/v1/users', ...)
+
+    // ❌ Bad - fake endpoint
+    http.get('/test/users', ...)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion icon="circle-exclamation" title="Handlers not working">
+    **Solution:**
+
+    1. Verify MSW is initialized in `.storybook/preview.ts`
+    2. Check msw-storybook-addon is installed
+    3. Ensure `mswLoader` is in loaders array
+    4. Check browser console for MSW startup message
+  </Accordion>
+
+  <Accordion icon="circle-exclamation" title="Real API calls leaking">
+    **Solution:**
+
+    MSW should block real calls. If not:
+
+    ```typescript .storybook/preview.ts
+    initialize({
+      onUnhandledRequest: 'error' // Throw error on unhandled requests
+    })
+    ```
+  </Accordion>
+
+  <Accordion icon="circle-exclamation" title="CORS errors">
+    **Solution:**
+
+    MSW bypasses CORS. If seeing CORS errors, MSW isn't active:
+
+    ```typescript
+    // Check MSW is running
+    console.log('MSW:', window.msw)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Templates
+
+Combine features from multiple templates:
+
+<CardGroup cols={2}>
+  <Card title="with-router" icon="route" href="/templates/with-router">
+    Add routing for navigation-based data fetching
+  </Card>
+  <Card title="interactive" icon="hand-pointer" href="/templates/interactive">
+    Add interaction tests for triggering API calls
+  </Card>
+  <Card title="form" icon="rectangle-list" href="/templates/form">
+    Combine with forms for POST/PUT requests
+  </Card>
+</CardGroup>

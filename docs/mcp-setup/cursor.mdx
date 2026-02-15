@@ -1,0 +1,282 @@
+---
+title: 'Cursor Setup'
+description: 'Connect Storybook MCP to Cursor AI'
+icon: 'arrow-pointer'
+---
+
+## Installation
+
+Add Storybook MCP to your Cursor MCP settings:
+
+<Steps>
+  <Step title="Open Cursor Settings">
+    Open Cursor settings (Cmd+, or Ctrl+,) and navigate to **MCP Servers**
+  </Step>
+
+  <Step title="Add Server Configuration">
+    Click "Add MCP Server" and paste this configuration:
+
+    ```json
+    {
+      "storybook-mcp": {
+        "command": "npx",
+        "args": ["-y", "storybook-mcp"],
+        "cwd": "${workspaceFolder}"
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Restart Cursor">
+    Restart Cursor to activate the MCP server
+  </Step>
+
+  <Step title="Verify Installation">
+    Open a chat and type: "List all components"
+
+    Cursor should invoke the `list_components` tool.
+  </Step>
+</Steps>
+
+## Pro License
+
+If you have a Pro license, add it to your configuration:
+
+```json
+{
+  "storybook-mcp": {
+    "command": "npx",
+    "args": ["-y", "storybook-mcp"],
+    "cwd": "${workspaceFolder}",
+    "env": {
+      "STORYBOOK_MCP_LICENSE": "your-license-key-here"
+    }
+  }
+}
+```
+
+<Tip>
+  Or create a `.env` file in your project root with `STORYBOOK_MCP_LICENSE=your-key`
+</Tip>
+
+## Multi-Project Setup
+
+For workspaces with multiple projects:
+
+```json
+{
+  "storybook-mcp-app": {
+    "command": "npx",
+    "args": ["-y", "storybook-mcp", "--config", "./apps/web/storybook-mcp.config.json"],
+    "cwd": "${workspaceFolder}/apps/web"
+  },
+  "storybook-mcp-admin": {
+    "command": "npx",
+    "args": ["-y", "storybook-mcp", "--config", "./apps/admin/storybook-mcp.config.json"],
+    "cwd": "${workspaceFolder}/apps/admin"
+  }
+}
+```
+
+## Usage Examples
+
+Once configured, try these prompts in Cursor:
+
+<AccordionGroup>
+  <Accordion icon="list" title="List components">
+    ```
+    List all components without stories
+    ```
+
+    Cursor will invoke `list_components` with `hasStory: false`
+  </Accordion>
+
+  <Accordion icon="wand-magic-sparkles" title="Generate stories">
+    ```
+    Generate a story for src/components/Button.tsx with variants
+    ```
+
+    Cursor will invoke `generate_story` with appropriate parameters
+  </Accordion>
+
+  <Accordion icon="chart-pie" title="Check coverage">
+    ```
+    What's my story coverage?
+    ```
+
+    Cursor will invoke `get_component_coverage`
+  </Accordion>
+
+  <Accordion icon="arrows-rotate" title="Sync all">
+    ```
+    Sync all components in the ui library
+    ```
+
+    Cursor will invoke `sync_all` with `library: "ui"`
+  </Accordion>
+
+  <Accordion icon="flask" title="Generate tests (Pro)">
+    ```
+    Generate Playwright tests for src/components/Button.tsx
+    ```
+
+    Cursor will invoke `generate_test`
+  </Accordion>
+</AccordionGroup>
+
+## Natural Language Examples
+
+Cursor understands natural language requests:
+
+<CodeGroup>
+```plaintext Component Discovery
+"Show me all components in the shared library that don't have stories yet"
+
+"Which components need stories the most?"
+
+"Analyze the Button component and tell me what props it has"
+```
+
+```plaintext Story Generation
+"Create a story for the LoginForm component with all variants"
+
+"Generate stories for all components in src/components/forms/"
+
+"Make an interactive story for the SearchBar component"
+```
+
+```plaintext Quality Checks
+"Check if my Button stories follow best practices"
+
+"Is my Storybook setup healthy?"
+
+"What's the story coverage for each library?"
+```
+
+```plaintext Pro Features
+"Generate Playwright tests for all form components"
+
+"Create MDX documentation for the Card component"
+
+"Sync all components and generate tests + docs"
+```
+</CodeGroup>
+
+## Advanced Configuration
+
+### Custom Config Path
+
+Point to a specific config file:
+
+```json
+{
+  "storybook-mcp": {
+    "command": "npx",
+    "args": [
+      "-y",
+      "storybook-mcp",
+      "--config",
+      "./config/storybook-mcp.json"
+    ],
+    "cwd": "${workspaceFolder}"
+  }
+}
+```
+
+### Framework Override
+
+Force a specific framework:
+
+```json
+{
+  "storybook-mcp": {
+    "command": "npx",
+    "args": ["-y", "storybook-mcp"],
+    "cwd": "${workspaceFolder}",
+    "env": {
+      "STORYBOOK_MCP_FRAMEWORK": "chakra"
+    }
+  }
+}
+```
+
+### Debug Mode
+
+Enable verbose logging:
+
+```json
+{
+  "storybook-mcp": {
+    "command": "npx",
+    "args": ["-y", "storybook-mcp", "--verbose"],
+    "cwd": "${workspaceFolder}"
+  }
+}
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion icon="circle-exclamation" title="MCP server not starting">
+    Check Cursor's output panel:
+    1. Open Command Palette (Cmd+Shift+P)
+    2. Search for "MCP: Show Logs"
+    3. Look for error messages
+
+    Common fixes:
+    - Ensure Node.js is installed (`node --version`)
+    - Clear npm cache: `npm cache clean --force`
+    - Try global install: `npm install -g storybook-mcp`
+  </Accordion>
+
+  <Accordion icon="circle-exclamation" title="Tools not appearing">
+    Verify MCP connection:
+    ```
+    @mcp list-tools storybook-mcp
+    ```
+
+    Should show all 13 tools. If not, restart Cursor.
+  </Accordion>
+
+  <Accordion icon="circle-exclamation" title="License not recognized">
+    Verify license key in env:
+    ```json
+    "env": {
+      "STORYBOOK_MCP_LICENSE": "your-actual-key"
+    }
+    ```
+
+    Or create `.env` file in project root.
+  </Accordion>
+
+  <Accordion icon="circle-exclamation" title="Wrong project directory">
+    Make sure `cwd` points to your project root:
+    ```json
+    "cwd": "${workspaceFolder}"  // ← Most common
+    "cwd": "${workspaceFolder}/apps/web"  // ← For monorepos
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Performance Tips
+
+<Tip>
+  For large monorepos, configure separate MCP instances per project to reduce scanning time.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/configuration">
+    Configure Storybook MCP for your project
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/overview">
+    Explore all available tools
+  </Card>
+  <Card title="Quickstart" icon="play" href="/quickstart">
+    5-minute tutorial
+  </Card>
+  <Card title="Pro License" icon="star" href="/license/pricing">
+    Unlock advanced features
+  </Card>
+</CardGroup>

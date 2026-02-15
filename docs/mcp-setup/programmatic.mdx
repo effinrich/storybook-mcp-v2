@@ -1,0 +1,459 @@
+---
+title: 'Programmatic Usage'
+description: 'Use Storybook MCP programmatically in your code'
+icon: 'code'
+---
+
+## Installation
+
+Install as a development dependency:
+
+```bash
+npm install --save-dev storybook-mcp
+```
+
+## Basic Usage
+
+Import and use the MCP tools directly:
+
+```typescript
+import { StorybookMCP } from 'storybook-mcp'
+
+const mcp = new StorybookMCP({
+  rootDir: process.cwd(),
+  framework: 'chakra',
+  libraries: [
+    {
+      name: 'ui',
+      path: 'src/components',
+      storyTitlePrefix: 'UI',
+    },
+  ],
+})
+
+// List all components
+const components = await mcp.listComponents()
+console.log(components)
+
+// Generate a story
+const result = await mcp.generateStory({
+  componentPath: 'src/components/Button.tsx',
+  includeVariants: true,
+  includeInteractive: true,
+})
+console.log(result.story.content)
+```
+
+## API Reference
+
+### Constructor
+
+```typescript
+new StorybookMCP(config: StorybookMCPConfig)
+```
+
+<ParamField path="config" type="StorybookMCPConfig" required>
+  Configuration object matching [config file schema](/configuration)
+</ParamField>
+
+### Methods
+
+<Tabs>
+  <Tab title="listComponents">
+    ```typescript
+    listComponents(options?: {
+      library?: string
+      hasStory?: boolean
+    }): Promise<Component[]>
+    ```
+
+    Returns array of components with metadata:
+
+    ```typescript
+    interface Component {
+      name: string
+      path: string
+      library: string
+      hasStory: boolean
+      storyPath?: string
+      props: PropDefinition[]
+    }
+    ```
+  </Tab>
+
+  <Tab title="analyzeComponent">
+    ```typescript
+    analyzeComponent(options: {
+      componentPath: string
+    }): Promise<ComponentAnalysis>
+    ```
+
+    Returns detailed component analysis:
+
+    ```typescript
+    interface ComponentAnalysis {
+      name: string
+      props: PropDefinition[]
+      dependencies: DependencyInfo
+      suggestions: string[]
+      complexity: 'low' | 'medium' | 'high'
+    }
+    ```
+  </Tab>
+
+  <Tab title="generateStory">
+    ```typescript
+    generateStory(options: {
+      componentPath: string
+      includeVariants?: boolean
+      includeInteractive?: boolean
+      includeA11y?: boolean
+      includeResponsive?: boolean
+      template?: string
+      overwrite?: boolean
+      dryRun?: boolean
+    }): Promise<StoryResult>
+    ```
+
+    Returns generated story details:
+
+    ```typescript
+    interface StoryResult {
+      story: {
+        content: string
+        filePath: string
+        imports: string[]
+        stories: string[]
+      }
+      written: boolean
+      path: string
+    }
+    ```
+  </Tab>
+
+  <Tab title="syncAll">
+    ```typescript
+    syncAll(options?: {
+      library?: string
+      generateStories?: boolean
+      generateTests?: boolean
+      generateDocs?: boolean
+      updateExisting?: boolean
+      dryRun?: boolean
+    }): Promise<SyncResult>
+    ```
+
+    Returns sync summary:
+
+    ```typescript
+    interface SyncResult {
+      processed: number
+      created: number
+      updated: number
+      skipped: number
+      errors: SyncError[]
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Advanced Usage
+
+### Custom Script
+
+Create a custom sync script:
+
+```typescript
+// scripts/sync-stories.ts
+import { StorybookMCP } from 'storybook-mcp'
+import { loadConfig } from 'storybook-mcp/config'
+
+async function main() {
+  // Load config from file
+  const config = await loadConfig()
+
+  const mcp = new StorybookMCP(config)
+
+  // Get components without stories
+  const components = await mcp.listComponents({ hasStory: false })
+
+  console.log(`Found ${components.length} components without stories`)
+
+  // Generate stories for each
+  for (const component of components) {
+    console.log(`Generating story for ${component.name}...`)
+
+    try {
+      await mcp.generateStory({
+        componentPath: component.path,
+        includeVariants: true,
+        includeInteractive: component.dependencies.hasEventHandlers,
+      })
+      console.log(`✅ ${component.name}`)
+    } catch (error) {
+      console.error(`❌ ${component.name}:`, error.message)
+    }
+  }
+}
+
+main().catch(console.error)
+```
+
+Run with:
+
+```bash
+tsx scripts/sync-stories.ts
+```
+
+### Watch Mode
+
+Implement file watching:
+
+```typescript
+import { StorybookMCP } from 'storybook-mcp'
+import { watch } from 'chokidar'
+import debounce from 'lodash.debounce'
+
+const mcp = new StorybookMCP({
+  /* config */
+})
+
+// Watch component files
+const watcher = watch('src/**/*.tsx', {
+  ignored: ['**/*.stories.tsx', '**/*.test.tsx'],
+})
+
+const sync = debounce(async (path: string) => {
+  console.log(`Changed: ${path}`)
+
+  try {
+    await mcp.syncComponent({
+      componentPath: path,
+      updateExisting: true,
+    })
+    console.log(`✅ Synced ${path}`)
+  } catch (error) {
+    console.error(`❌ ${path}:`, error.message)
+  }
+}, 1000)
+
+watcher.on('change', sync)
+
+console.log('Watching for changes...')
+```
+
+### CI/CD Integration
+
+Use in GitHub Actions:
+
+```typescript
+// scripts/ci-check-coverage.ts
+import { StorybookMCP } from 'storybook-mcp'
+
+async function main() {
+  const mcp = new StorybookMCP({
+    /* config */
+  })
+
+  const coverage = await mcp.getComponentCoverage()
+
+  console.log(`Story coverage: ${coverage.percentage}%`)
+
+  // Fail if coverage below threshold
+  if (coverage.percentage < 80) {
+    console.error('❌ Story coverage below 80%')
+    process.exit(1)
+  }
+
+  console.log('✅ Story coverage passed')
+}
+
+main().catch((error) => {
+  console.error(error)
+  process.exit(1)
+})
+```
+
+In `.github/workflows/ci.yml`:
+
+```yaml
+- name: Check story coverage
+  run: tsx scripts/ci-check-coverage.ts
+```
+
+### Custom Templates
+
+Provide custom templates programmatically:
+
+```typescript
+import { StorybookMCP, Template } from 'storybook-mcp'
+
+const customTemplate: Template = {
+  name: 'my-custom-template',
+  description: 'Custom story template',
+  generate: (component) => {
+    return `
+import type { Meta, StoryObj } from '@storybook/react'
+import { ${component.name} } from './${component.name}'
+
+const meta: Meta<typeof ${component.name}> = {
+  title: 'Custom/${component.name}',
+  component: ${component.name},
+}
+
+export default meta
+type Story = StoryObj<typeof ${component.name}>
+
+export const Default: Story = {
+  args: {
+    // Custom defaults
+  },
+}
+`
+  },
+}
+
+const mcp = new StorybookMCP({
+  /* config */
+  templates: [customTemplate],
+})
+```
+
+## TypeScript Support
+
+Full TypeScript support with exported types:
+
+```typescript
+import type {
+  StorybookMCPConfig,
+  Component,
+  ComponentAnalysis,
+  StoryGenerationOptions,
+  PropDefinition,
+  DependencyInfo,
+} from 'storybook-mcp'
+```
+
+## Error Handling
+
+All methods throw `StorybookMCPError` with error codes:
+
+```typescript
+import { StorybookMCP, StorybookMCPError, ErrorCode } from 'storybook-mcp'
+
+try {
+  await mcp.generateStory({
+    componentPath: 'src/components/Button.tsx',
+  })
+} catch (error) {
+  if (error instanceof StorybookMCPError) {
+    switch (error.code) {
+      case ErrorCode.COMPONENT_NOT_FOUND:
+        console.error('Component not found')
+        break
+      case ErrorCode.LICENSE_REQUIRED:
+        console.error('Pro license required')
+        break
+      default:
+        console.error(error.message)
+    }
+  } else {
+    throw error
+  }
+}
+```
+
+## Testing
+
+Mock Storybook MCP in tests:
+
+```typescript
+import { jest } from '@jest/globals'
+import type { StorybookMCP } from 'storybook-mcp'
+
+const mockMCP: jest.Mocked<StorybookMCP> = {
+  listComponents: jest.fn().mockResolvedValue([
+    {
+      name: 'Button',
+      path: 'src/components/Button.tsx',
+      library: 'ui',
+      hasStory: false,
+    },
+  ]),
+  generateStory: jest.fn().mockResolvedValue({
+    story: {
+      content: '/* story content */',
+      filePath: 'src/components/Button.stories.tsx',
+    },
+    written: true,
+  }),
+  // ... other methods
+}
+```
+
+## Examples
+
+<AccordionGroup>
+  <Accordion icon="terminal" title="Batch story generation">
+    ```typescript
+    import { StorybookMCP } from 'storybook-mcp'
+
+    const mcp = new StorybookMCP({ /* config */ })
+
+    const components = await mcp.listComponents({ hasStory: false })
+
+    await Promise.all(
+      components.map((c) =>
+        mcp.generateStory({
+          componentPath: c.path,
+          includeVariants: true,
+        })
+      )
+    )
+    ```
+  </Accordion>
+
+  <Accordion icon="chart-pie" title="Coverage reporting">
+    ```typescript
+    const coverage = await mcp.getComponentCoverage()
+
+    console.table(coverage.byLibrary)
+
+    // Output to JSON
+    fs.writeFileSync(
+      'coverage-report.json',
+      JSON.stringify(coverage, null, 2)
+    )
+    ```
+  </Accordion>
+
+  <Accordion icon="filter" title="Selective sync">
+    ```typescript
+    // Only sync high-priority components
+    const suggestions = await mcp.suggestStories({ limit: 10 })
+
+    for (const suggestion of suggestions) {
+      await mcp.generateStory({
+        componentPath: suggestion.path,
+      })
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="code" href="/api-reference/overview">
+    Full tool documentation
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration">
+    Config file reference
+  </Card>
+  <Card title="TypeScript" icon="file-code" href="https://github.com/yourusername/storybook-mcp/blob/main/src/types.ts">
+    Type definitions
+  </Card>
+  <Card title="Examples" icon="folder" href="https://github.com/yourusername/storybook-mcp/tree/main/examples">
+    Code examples
+  </Card>
+</CardGroup>

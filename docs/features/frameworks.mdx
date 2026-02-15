@@ -1,0 +1,344 @@
+---
+title: 'Framework Support'
+description: 'First-class support for popular UI frameworks'
+---
+
+## Supported Frameworks
+
+Storybook MCP provides optimized story generation for these frameworks:
+
+<CardGroup cols={2}>
+  <Card title="Chakra UI" icon="react" color="#319795">
+    Complete support with theme tokens, Stack components, and responsive syntax
+  </Card>
+  <Card title="shadcn/ui" icon="palette" color="#000000">
+    CVA variants, Radix primitives, and Tailwind utilities
+  </Card>
+  <Card title="Tamagui" icon="mobile" color="#4E8CF5">
+    YStack layouts, theme variables, and responsive tokens
+  </Card>
+  <Card title="Gluestack UI" icon="layer-group" color="#FF6B6B">
+    Universal components for React and React Native
+  </Card>
+  <Card title="React Native" icon="mobile-screen" color="#61DAFB">
+    Native components with proper testing setup
+  </Card>
+  <Card title="Vanilla React" icon="code" color="#61DAFB">
+    Standard React patterns without framework dependencies
+  </Card>
+</CardGroup>
+
+## Framework Detection
+
+Storybook MCP automatically detects your framework from:
+
+1. **Config file** (highest priority)
+2. **package.json dependencies**
+3. **Component imports** (fallback)
+
+### Manual Override
+
+Force a specific framework in your config:
+
+```json storybook-mcp.config.json
+{
+  "framework": "chakra"
+}
+```
+
+## Framework-Specific Features
+
+<Tabs>
+  <Tab title="Chakra UI">
+    ### Optimizations
+
+    - **Theme tokens**: Automatically uses `colorScheme`, `size`, `variant` props
+    - **Stack components**: Uses `Stack`, `HStack`, `VStack` for layouts
+    - **Responsive syntax**: Generates `{ base: 'sm', md: 'md' }` patterns
+    - **Icons**: Detects Chakra icons and imports correctly
+
+    ### Generated Story Example
+
+    ```tsx
+    import { Stack, Button } from '@chakra-ui/react'
+
+    export const AllVariants: Story = {
+      render: () => (
+        <Stack spacing={4}>
+          {(['sm', 'md', 'lg'] as const).map(size => (
+            <Stack key={size} direction="row" spacing={2}>
+              {(['solid', 'outline', 'ghost'] as const).map(variant => (
+                <Button
+                  key={variant}
+                  size={size}
+                  variant={variant}
+                  colorScheme="blue"
+                >
+                  {size} {variant}
+                </Button>
+              ))}
+            </Stack>
+          ))}
+        </Stack>
+      ),
+    }
+    ```
+
+    ### Provider Setup
+
+    Automatically wraps stories in `ChakraProvider`:
+
+    ```tsx
+    export const decorators = [
+      (Story) => (
+        <ChakraProvider>
+          <Story />
+        </ChakraProvider>
+      ),
+    ]
+    ```
+  </Tab>
+
+  <Tab title="shadcn/ui">
+    ### Optimizations
+
+    - **CVA variants**: Detects and uses `cva()` variant configs
+    - **Radix primitives**: Proper handling of compound components
+    - **Tailwind classes**: Uses `cn()` utility for class merging
+    - **Form components**: Special handling for React Hook Form integration
+
+    ### Generated Story Example
+
+    ```tsx
+    import { Button } from '@/components/ui/button'
+
+    export const Variants: Story = {
+      render: () => (
+        <div className="flex gap-4">
+          <Button variant="default">Default</Button>
+          <Button variant="destructive">Destructive</Button>
+          <Button variant="outline">Outline</Button>
+          <Button variant="ghost">Ghost</Button>
+        </div>
+      ),
+    }
+    ```
+
+    ### Import Aliases
+
+    Respects your tsconfig path aliases:
+
+    ```json storybook-mcp.config.json
+    {
+      "framework": "shadcn",
+      "libraries": [{
+        "name": "ui",
+        "path": "src/components/ui",
+        "importAlias": "@/components/ui"
+      }]
+    }
+    ```
+  </Tab>
+
+  <Tab title="Tamagui">
+    ### Optimizations
+
+    - **YStack/XStack**: Uses Tamagui layout components
+    - **Theme variables**: Uses `$color`, `$space`, `$size` tokens
+    - **Responsive tokens**: Generates `$sm`, `$md`, `$lg` media queries
+    - **Native support**: Works with both web and native
+
+    ### Generated Story Example
+
+    ```tsx
+    import { YStack, Button } from 'tamagui'
+
+    export const Sizes: Story = {
+      render: () => (
+        <YStack space="$4">
+          <Button size="$2">Small</Button>
+          <Button size="$4">Medium</Button>
+          <Button size="$6">Large</Button>
+        </YStack>
+      ),
+    }
+    ```
+
+    ### Configuration
+
+    ```json storybook-mcp.config.json
+    {
+      "framework": "tamagui",
+      "libraries": [{
+        "name": "ui",
+        "path": "packages/ui/src",
+        "decorators": ["withTamagui"]
+      }]
+    }
+    ```
+  </Tab>
+
+  <Tab title="React Native">
+    ### Optimizations
+
+    - **Native components**: Uses `View`, `Text`, `Pressable`
+    - **StyleSheet**: Generates proper StyleSheet.create() patterns
+    - **React Native Testing Library**: Uses `@testing-library/react-native`
+    - **Metro bundler**: Configures imports for React Native
+
+    ### Generated Story Example
+
+    ```tsx
+    import { View, Text, Pressable, StyleSheet } from 'react-native'
+    import { Button } from './Button'
+
+    export const Variants: Story = {
+      render: () => (
+        <View style={styles.container}>
+          <Button variant="primary">Primary</Button>
+          <Button variant="secondary">Secondary</Button>
+        </View>
+      ),
+    }
+
+    const styles = StyleSheet.create({
+      container: {
+        gap: 16,
+        padding: 16,
+      },
+    })
+    ```
+
+    ### Storybook Setup
+
+    Requires `@storybook/react-native`:
+
+    ```bash
+    npm install --save-dev @storybook/react-native
+    ```
+  </Tab>
+
+  <Tab title="Vanilla React">
+    ### Optimizations
+
+    - **Standard patterns**: Pure React without framework dependencies
+    - **Inline styles**: Uses React style objects
+    - **Fragments**: Uses React.Fragment for grouping
+    - **Accessibility**: Focuses on ARIA attributes
+
+    ### Generated Story Example
+
+    ```tsx
+    import React from 'react'
+    import { Button } from './Button'
+
+    export const Variants: Story = {
+      render: () => (
+        <>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <Button variant="primary">Primary</Button>
+            <Button variant="secondary">Secondary</Button>
+            <Button variant="tertiary">Tertiary</Button>
+          </div>
+        </>
+      ),
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Custom Framework
+
+For frameworks not listed, use `custom` framework:
+
+```json storybook-mcp.config.json
+{
+  "framework": "custom",
+  "libraries": [{
+    "name": "ui",
+    "path": "src/components",
+    "decorators": ["withCustomProvider"]
+  }]
+}
+```
+
+Then provide custom templates:
+
+```bash
+mkdir .storybook-mcp-templates
+```
+
+See [Custom Templates](/templates/custom) for details.
+
+## Framework Detection Examples
+
+<CodeGroup>
+```json Auto-Detect from package.json
+{
+  "dependencies": {
+    "@chakra-ui/react": "^2.8.0"
+  }
+}
+// → Detects "chakra" framework
+```
+
+```json Multiple Frameworks
+{
+  "dependencies": {
+    "@chakra-ui/react": "^2.8.0",
+    "tamagui": "^1.0.0"
+  }
+}
+// → Uses most prevalent in codebase
+// → Or specify in config
+```
+
+```typescript Component-Level Detection
+// Button.tsx
+import { cva } from 'class-variance-authority'
+import * as React from 'react'
+
+// → Detects shadcn from CVA import
+```
+</CodeGroup>
+
+## Migration Between Frameworks
+
+Switching frameworks? Regenerate all stories:
+
+```bash
+# Update config
+vim storybook-mcp.config.json  # Change framework
+
+# Clear cache and regenerate
+rm .storybook-mcp-cache.json
+npx storybook-mcp sync-all --overwrite
+```
+
+## Framework Roadmap
+
+Coming soon:
+
+- **Ant Design** - Enterprise UI framework
+- **Material-UI** - Google's Material Design
+- **Mantine** - Modern React components
+- **Headless UI** - Unstyled accessible components
+
+Vote on [GitHub Discussions](https://github.com/yourusername/storybook-mcp/discussions) for priority.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/configuration">
+    Configure framework settings
+  </Card>
+  <Card title="Templates" icon="rectangle-code" href="/templates/overview">
+    Framework-specific templates
+  </Card>
+  <Card title="generate_story" icon="wand-magic-sparkles" href="/api-reference/generate-story">
+    Story generation API
+  </Card>
+  <Card title="Examples" icon="code" href="https://github.com/yourusername/storybook-mcp/tree/main/examples">
+    Framework examples
+  </Card>
+</CardGroup>

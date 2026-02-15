@@ -409,9 +409,9 @@ function analyzeDependencies(source: string): DependencyInfo {
 function extractNotableImports(source: string): string[] {
   const imports: string[] = []
   const importRegex = /from ['"]([^'"]+)['"]/g
-  let match: RegExpExecArray | null = importRegex.exec(source)
 
-  while (match !== null) {
+  // Use matchAll for cleaner iteration
+  for (const match of source.matchAll(importRegex)) {
     const pkg = match[1]
     // Skip relative imports and common packages
     if (
@@ -421,7 +421,6 @@ function extractNotableImports(source: string): string[] {
     ) {
       imports.push(pkg)
     }
-    match = importRegex.exec(source)
   }
 
   return [...new Set(imports)].slice(0, THRESHOLDS.MAX_NOTABLE_IMPORTS)

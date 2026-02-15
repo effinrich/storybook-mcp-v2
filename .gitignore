@@ -13,6 +13,9 @@ pnpm-debug.log
 # Private scripts (license generation, etc.)
 scripts/
 pro-keys.md
+**/generate-key.*
+**/*-keys.md
 
 # MCP cache
 .storybook-mcp-cache.json
+.forgekit/

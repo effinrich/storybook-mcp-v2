@@ -1,0 +1,559 @@
+---
+title: 'form Template'
+description: 'Form components with validation and submission'
+---
+
+## Overview
+
+The `form` template generates stories for form components with validation, error handling, and submission flows.
+
+**Use this when:**
+- Component is a form or form input
+- Has validation logic
+- Handles form submission
+- Uses form libraries (React Hook Form, Formik)
+- Need to test form states (empty, filled, errors, submitting)
+
+## Generated Output
+
+```tsx Example
+import type { Meta, StoryObj } from '@storybook/react'
+import { expect, fn, userEvent, within } from '@storybook/test'
+import { LoginForm } from './LoginForm'
+
+const meta: Meta<typeof LoginForm> = {
+  title: 'Forms/LoginForm',
+  component: LoginForm,
+  tags: ['autodocs'],
+}
+
+export default meta
+type Story = StoryObj<typeof LoginForm>
+
+export const Empty: Story = {
+  args: {
+    onSubmit: fn(),
+  },
+}
+
+export const Filled: Story = {
+  args: {
+    defaultValues: {
+      email: 'user@example.com',
+      password: 'password123',
+    },
+    onSubmit: fn(),
+  },
+}
+
+export const WithErrors: Story = {
+  args: {
+    errors: {
+      email: 'Please enter a valid email',
+      password: 'Password must be at least 8 characters',
+    },
+    onSubmit: fn(),
+  },
+}
+
+export const Submitting: Story = {
+  args: {
+    isSubmitting: true,
+    defaultValues: {
+      email: 'user@example.com',
+      password: 'password123',
+    },
+    onSubmit: fn(),
+  },
+}
+
+export const SubmitInteraction: Story = {
+  args: {
+    onSubmit: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+
+    // Fill email
+    const emailInput = canvas.getByLabelText(/email/i)
+    await userEvent.type(emailInput, 'user@example.com')
+
+    // Fill password
+    const passwordInput = canvas.getByLabelText(/password/i)
+    await userEvent.type(passwordInput, 'password123')
+
+    // Submit form
+    const submitButton = canvas.getByRole('button', { name: /submit|sign in|log in/i })
+    await userEvent.click(submitButton)
+
+    // Verify onSubmit was called
+    await expect(args.onSubmit).toHaveBeenCalledWith({
+      email: 'user@example.com',
+      password: 'password123',
+    })
+  },
+}
+
+export const ValidationFlow: Story = {
+  args: {
+    onSubmit: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+
+    // Try to submit empty form
+    const submitButton = canvas.getByRole('button', { name: /submit/i })
+    await userEvent.click(submitButton)
+
+    // Should show validation errors
+    await expect(canvas.getByText(/email is required/i)).toBeInTheDocument()
+
+    // Fill email with invalid format
+    const emailInput = canvas.getByLabelText(/email/i)
+    await userEvent.type(emailInput, 'invalid-email')
+    await userEvent.tab() // Trigger blur validation
+
+    // Should show format error
+    await expect(canvas.getByText(/invalid email/i)).toBeInTheDocument()
+
+    // Fix email
+    await userEvent.clear(emailInput)
+    await userEvent.type(emailInput, 'user@example.com')
+
+    // Fill password
+    const passwordInput = canvas.getByLabelText(/password/i)
+    await userEvent.type(passwordInput, 'password123')
+
+    // Submit should now work
+    await userEvent.click(submitButton)
+    await expect(args.onSubmit).toHaveBeenCalled()
+  },
+}
+```
+
+## What's Included
+
+<Check>Empty state</Check>
+<Check>Filled state with default values</Check>
+<Check>Error states with validation messages</Check>
+<Check>Submitting/loading state</Check>
+<Check>Submit interaction test</Check>
+<Check>Full validation flow test</Check>
+<Check>Keyboard navigation tests</Check>
+
+## Form Library Support
+
+<Tabs>
+  <Tab title="React Hook Form">
+    ```tsx Component
+    import { useForm } from 'react-hook-form'
+
+    interface FormData {
+      email: string
+      password: string
+    }
+
+    export const LoginForm = () => {
+      const { register, handleSubmit, formState: { errors } } = useForm<FormData>()
+
+      const onSubmit = (data: FormData) => {
+        console.log(data)
+      }
+
+      return (
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <input {...register('email', { required: true })} />
+          {errors.email && <span>Email is required</span>}
+
+          <input type="password" {...register('password')} />
+
+          <button type="submit">Submit</button>
+        </form>
+      )
+    }
+    ```
+
+    Generated story wraps in FormProvider:
+    ```tsx
+    import { FormProvider, useForm } from 'react-hook-form'
+
+    export const Default: Story = {
+      render: (args) => {
+        const methods = useForm()
+        return (
+          <FormProvider {...methods}>
+            <LoginForm {...args} />
+          </FormProvider>
+        )
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="Formik">
+    ```tsx Component
+    import { Formik, Form, Field } from 'formik'
+
+    export const LoginForm = () => (
+      <Formik
+        initialValues={{ email: '', password: '' }}
+        onSubmit={(values) => console.log(values)}
+      >
+        <Form>
+          <Field name="email" type="email" />
+          <Field name="password" type="password" />
+          <button type="submit">Submit</button>
+        </Form>
+      </Formik>
+    )
+    ```
+
+    Generated stories provide initialValues:
+    ```tsx
+    export const Filled: Story = {
+      args: {
+        initialValues: {
+          email: 'user@example.com',
+          password: 'password123',
+        },
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="Controlled">
+    ```tsx Component
+    export const LoginForm = ({
+      values,
+      errors,
+      onChange,
+      onSubmit
+    }: FormProps) => (
+      <form onSubmit={onSubmit}>
+        <input
+          value={values.email}
+          onChange={(e) => onChange('email', e.target.value)}
+        />
+        {errors?.email && <span>{errors.email}</span>}
+
+        <input
+          type="password"
+          value={values.password}
+          onChange={(e) => onChange('password', e.target.value)}
+        />
+
+        <button type="submit">Submit</button>
+      </form>
+    )
+    ```
+
+    Generated stories provide all props:
+    ```tsx
+    export const WithErrors: Story = {
+      args: {
+        values: {
+          email: 'invalid',
+          password: '',
+        },
+        errors: {
+          email: 'Invalid email format',
+          password: 'Password is required',
+        },
+        onChange: fn(),
+        onSubmit: fn(),
+      },
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Validation Patterns
+
+<Tabs>
+  <Tab title="Required Fields">
+    ```tsx
+    export const RequiredValidation: Story = {
+      play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement)
+
+        // Submit without filling
+        const submitButton = canvas.getByRole('button', { name: /submit/i })
+        await userEvent.click(submitButton)
+
+        // All required fields should show errors
+        await expect(canvas.getByText(/email is required/i)).toBeInTheDocument()
+        await expect(canvas.getByText(/password is required/i)).toBeInTheDocument()
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="Format Validation">
+    ```tsx
+    export const EmailFormatValidation: Story = {
+      play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement)
+
+        const emailInput = canvas.getByLabelText(/email/i)
+
+        // Test various invalid formats
+        const invalidEmails = ['invalid', '@example.com', 'user@', 'user @example.com']
+
+        for (const email of invalidEmails) {
+          await userEvent.clear(emailInput)
+          await userEvent.type(emailInput, email)
+          await userEvent.tab() // Trigger validation
+
+          await expect(
+            canvas.getByText(/invalid email|please enter a valid email/i)
+          ).toBeInTheDocument()
+        }
+
+        // Test valid format
+        await userEvent.clear(emailInput)
+        await userEvent.type(emailInput, 'user@example.com')
+        await userEvent.tab()
+
+        await expect(
+          canvas.queryByText(/invalid email/i)
+        ).not.toBeInTheDocument()
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="Min/Max Length">
+    ```tsx
+    export const PasswordLengthValidation: Story = {
+      play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement)
+
+        const passwordInput = canvas.getByLabelText(/password/i)
+
+        // Too short
+        await userEvent.type(passwordInput, '123')
+        await userEvent.tab()
+
+        await expect(
+          canvas.getByText(/password must be at least 8 characters/i)
+        ).toBeInTheDocument()
+
+        // Valid length
+        await userEvent.clear(passwordInput)
+        await userEvent.type(passwordInput, '12345678')
+        await userEvent.tab()
+
+        await expect(
+          canvas.queryByText(/password must be/i)
+        ).not.toBeInTheDocument()
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="Custom Validation">
+    ```tsx
+    export const PasswordMatchValidation: Story = {
+      play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement)
+
+        const passwordInput = canvas.getByLabelText(/^password$/i)
+        const confirmInput = canvas.getByLabelText(/confirm password/i)
+
+        // Enter different passwords
+        await userEvent.type(passwordInput, 'password123')
+        await userEvent.type(confirmInput, 'password456')
+        await userEvent.tab()
+
+        // Should show error
+        await expect(
+          canvas.getByText(/passwords do not match/i)
+        ).toBeInTheDocument()
+
+        // Fix confirmation
+        await userEvent.clear(confirmInput)
+        await userEvent.type(confirmInput, 'password123')
+        await userEvent.tab()
+
+        // Error should be gone
+        await expect(
+          canvas.queryByText(/passwords do not match/i)
+        ).not.toBeInTheDocument()
+      },
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Form States
+
+Test all form states:
+
+```tsx
+// Initial empty state
+export const Initial: Story = {}
+
+// Partially filled
+export const PartiallyFilled: Story = {
+  args: {
+    defaultValues: {
+      email: 'user@example.com',
+      password: '',
+    },
+  },
+}
+
+// Completely filled
+export const Filled: Story = {
+  args: {
+    defaultValues: {
+      email: 'user@example.com',
+      password: 'password123',
+    },
+  },
+}
+
+// With errors
+export const WithErrors: Story = {
+  args: {
+    errors: {
+      email: 'This email is already taken',
+    },
+  },
+}
+
+// Submitting
+export const Submitting: Story = {
+  args: {
+    isSubmitting: true,
+    defaultValues: {
+      email: 'user@example.com',
+      password: 'password123',
+    },
+  },
+}
+
+// Success
+export const Success: Story = {
+  args: {
+    isSuccess: true,
+    defaultValues: {
+      email: 'user@example.com',
+      password: 'password123',
+    },
+  },
+}
+
+// Disabled
+export const Disabled: Story = {
+  args: {
+    disabled: true,
+    defaultValues: {
+      email: 'user@example.com',
+      password: 'password123',
+    },
+  },
+}
+```
+
+## Usage
+
+<CodeGroup>
+```json MCP Tool
+{
+  "componentPath": "src/forms/LoginForm.tsx",
+  "template": "form"
+}
+```
+
+```bash CLI
+npx storybook-mcp sync src/forms/LoginForm.tsx --template form
+```
+</CodeGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion icon="tag" title="Use semantic labels">
+    Always use proper labels for accessibility:
+
+    ```tsx
+    // ✅ Good
+    <label htmlFor="email">Email</label>
+    <input id="email" type="email" />
+
+    // ❌ Bad
+    <input placeholder="Email" />
+    ```
+
+    Then test with `getByLabelText`:
+    ```tsx
+    const emailInput = canvas.getByLabelText(/email/i)
+    ```
+  </Accordion>
+
+  <Accordion icon="shield-check" title="Test all validation rules">
+    Create stories for each validation scenario:
+
+    ```tsx
+    export const RequiredFields: Story = { /* ... */ }
+    export const EmailFormat: Story = { /* ... */ }
+    export const PasswordStrength: Story = { /* ... */ }
+    export const UniqueUsername: Story = { /* ... */ }
+    ```
+  </Accordion>
+
+  <Accordion icon="keyboard" title="Test keyboard navigation">
+    Ensure forms work without mouse:
+
+    ```tsx
+    export const KeyboardNavigation: Story = {
+      play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement)
+
+        // Tab through fields
+        await userEvent.tab() // Email
+        await expect(canvas.getByLabelText(/email/i)).toHaveFocus()
+
+        await userEvent.tab() // Password
+        await expect(canvas.getByLabelText(/password/i)).toHaveFocus()
+
+        await userEvent.tab() // Submit button
+        await expect(canvas.getByRole('button')).toHaveFocus()
+
+        // Submit with Enter
+        await userEvent.keyboard('{Enter}')
+      },
+    }
+    ```
+  </Accordion>
+
+  <Accordion icon="circle-exclamation" title="Test error recovery">
+    Show that users can fix errors:
+
+    ```tsx
+    export const ErrorRecovery: Story = {
+      play: async ({ canvasElement }) => {
+        // 1. Trigger error
+        // 2. Fix the issue
+        // 3. Verify error is gone
+        // 4. Submit successfully
+      },
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Templates
+
+<CardGroup cols={2}>
+  <Card title="with-msw" icon="server" href="/templates/with-msw">
+    Mock form submission APIs
+  </Card>
+  <Card title="interactive" icon="hand-pointer" href="/templates/interactive">
+    Additional interaction patterns
+  </Card>
+  <Card title="with-variants" icon="grid-2" href="/templates/with-variants">
+    Show form size/style variants
+  </Card>
+</CardGroup>

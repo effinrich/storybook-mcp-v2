@@ -1,0 +1,384 @@
+---
+title: 'Claude Desktop Setup'
+description: 'Connect Storybook MCP to Claude Desktop'
+icon: 'desktop'
+---
+
+## Installation
+
+Add Storybook MCP to Claude Desktop's MCP configuration:
+
+<Steps>
+  <Step title="Locate Config File">
+    Find your Claude Desktop config file:
+
+    <CodeGroup>
+    ```bash macOS
+    ~/Library/Application Support/Claude/claude_desktop_config.json
+    ```
+
+    ```bash Windows
+    %APPDATA%\Claude\claude_desktop_config.json
+    ```
+
+    ```bash Linux
+    ~/.config/Claude/claude_desktop_config.json
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Add Server Configuration">
+    Open the config file and add:
+
+    ```json
+    {
+      "mcpServers": {
+        "storybook-mcp": {
+          "command": "npx",
+          "args": ["-y", "storybook-mcp"],
+          "cwd": "/absolute/path/to/your/project"
+        }
+      }
+    }
+    ```
+
+    <Warning>
+      `cwd` must be an **absolute path** to your project directory
+    </Warning>
+  </Step>
+
+  <Step title="Restart Claude Desktop">
+    Quit and reopen Claude Desktop to load the MCP server
+  </Step>
+
+  <Step title="Verify Installation">
+    In a new chat, type: "List all components"
+
+    Claude should invoke the `list_components` tool and show your components.
+  </Step>
+</Steps>
+
+## Pro License
+
+Add your Pro license key:
+
+```json
+{
+  "mcpServers": {
+    "storybook-mcp": {
+      "command": "npx",
+      "args": ["-y", "storybook-mcp"],
+      "cwd": "/absolute/path/to/your/project",
+      "env": {
+        "STORYBOOK_MCP_LICENSE": "your-license-key-here"
+      }
+    }
+  }
+}
+```
+
+<Tip>
+  Alternatively, create a `.env` file in your project with `STORYBOOK_MCP_LICENSE=your-key`
+</Tip>
+
+## Multi-Project Setup
+
+Manage multiple projects with separate MCP instances:
+
+```json
+{
+  "mcpServers": {
+    "storybook-mcp-web": {
+      "command": "npx",
+      "args": ["-y", "storybook-mcp"],
+      "cwd": "/Users/you/projects/web-app"
+    },
+    "storybook-mcp-mobile": {
+      "command": "npx",
+      "args": ["-y", "storybook-mcp"],
+      "cwd": "/Users/you/projects/mobile-app"
+    }
+  }
+}
+```
+
+Claude will ask which project you want to work with.
+
+## Usage Examples
+
+Try these prompts in Claude Desktop:
+
+<AccordionGroup>
+  <Accordion icon="rocket" title="Quick start">
+    ```
+    Show me all components that need stories
+    ```
+
+    Claude will list components without stories and offer to generate them.
+  </Accordion>
+
+  <Accordion icon="wand-magic-sparkles" title="Generate comprehensive stories">
+    ```
+    Generate a story for src/components/Button.tsx with:
+    - All size and variant combinations
+    - Interactive tests for clicks
+    - Accessibility checks
+    - Responsive viewport tests
+    ```
+
+    Claude will invoke `generate_story` with all options enabled.
+  </Accordion>
+
+  <Accordion icon="arrows-rotate" title="Batch operations">
+    ```
+    Sync all components in the UI library and generate tests
+    ```
+
+    Claude will invoke `sync_all` with tests enabled.
+  </Accordion>
+
+  <Accordion icon="magnifying-glass" title="Component analysis">
+    ```
+    Analyze my Button component and suggest improvements
+    ```
+
+    Claude will analyze props, dependencies, and provide suggestions.
+  </Accordion>
+
+  <Accordion icon="chart-line" title="Coverage insights">
+    ```
+    What's my story coverage? Show me which libraries need the most work.
+    ```
+
+    Claude will get coverage stats and prioritize libraries.
+  </Accordion>
+</AccordionGroup>
+
+## Natural Language Workflows
+
+Claude Desktop excels at understanding complex requests:
+
+<Tabs>
+  <Tab title="Component Discovery">
+    ```plaintext
+    "I'm working on a design system. Show me all the form components
+    that don't have stories yet, prioritized by how often they're used."
+    ```
+
+    Claude will:
+    1. List components without stories
+    2. Analyze import frequency
+    3. Suggest which to tackle first
+  </Tab>
+
+  <Tab title="Story Generation">
+    ```plaintext
+    "Generate stories for all components in src/components/forms/.
+    Make them interactive with form submission tests and MSW mocks
+    for API calls."
+    ```
+
+    Claude will:
+    1. Find all form components
+    2. Generate stories with `interactive` template
+    3. Add MSW handlers for API mocks
+  </Tab>
+
+  <Tab title="Quality Assurance">
+    ```plaintext
+    "Check all my existing stories for best practices and fix any issues."
+    ```
+
+    Claude will:
+    1. Validate all story files
+    2. Report issues
+    3. Offer to fix them automatically
+  </Tab>
+
+  <Tab title="Documentation">
+    ```plaintext
+    "Generate comprehensive documentation for my entire component library,
+    including usage examples and prop tables."
+    ```
+
+    Claude will:
+    1. Analyze all components
+    2. Generate MDX docs for each
+    3. Create an overview page
+  </Tab>
+</Tabs>
+
+## Advanced Configuration
+
+### Custom Config Path
+
+Use a custom config file:
+
+```json
+{
+  "mcpServers": {
+    "storybook-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "storybook-mcp",
+        "--config",
+        "./config/storybook-mcp.config.json"
+      ],
+      "cwd": "/absolute/path/to/project"
+    }
+  }
+}
+```
+
+### Framework Override
+
+Force a specific framework:
+
+```json
+{
+  "mcpServers": {
+    "storybook-mcp": {
+      "command": "npx",
+      "args": ["-y", "storybook-mcp"],
+      "cwd": "/absolute/path/to/project",
+      "env": {
+        "STORYBOOK_MCP_FRAMEWORK": "shadcn"
+      }
+    }
+  }
+}
+```
+
+### Verbose Logging
+
+Enable debug output:
+
+```json
+{
+  "mcpServers": {
+    "storybook-mcp": {
+      "command": "npx",
+      "args": ["-y", "storybook-mcp", "--verbose"],
+      "cwd": "/absolute/path/to/project"
+    }
+  }
+}
+```
+
+Logs appear in:
+- macOS: `~/Library/Logs/Claude/mcp*.log`
+- Windows: `%APPDATA%\Claude\logs\mcp*.log`
+- Linux: `~/.config/Claude/logs/mcp*.log`
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion icon="circle-exclamation" title="MCP server not loading">
+    **Check config file syntax:**
+
+    Validate JSON at [jsonlint.com](https://jsonlint.com)
+
+    Common issues:
+    - Missing comma between servers
+    - Trailing comma after last item
+    - Unescaped backslashes in Windows paths (use `C:\\Users\\...` or forward slashes)
+  </Accordion>
+
+  <Accordion icon="circle-exclamation" title="Tools not appearing">
+    **View Claude's developer logs:**
+
+    1. Open Claude Desktop
+    2. Go to Settings → Advanced
+    3. Enable "Developer mode"
+    4. Check logs for MCP errors
+
+    Try reinstalling:
+    ```bash
+    npm uninstall -g storybook-mcp
+    npm install -g storybook-mcp
+    ```
+  </Accordion>
+
+  <Accordion icon="circle-exclamation" title="Wrong project directory">
+    Verify `cwd` is correct:
+
+    ```json
+    "cwd": "/Users/yourname/projects/myapp"  // ✅ Absolute path
+    "cwd": "~/projects/myapp"                // ❌ Tilde not expanded
+    "cwd": "./myapp"                         // ❌ Relative path
+    ```
+
+    On Windows, use forward slashes:
+    ```json
+    "cwd": "C:/Users/yourname/projects/myapp"
+    ```
+  </Accordion>
+
+  <Accordion icon="circle-exclamation" title="License not recognized">
+    Ensure license is in `env` or `.env` file:
+
+    ```json
+    "env": {
+      "STORYBOOK_MCP_LICENSE": "polar_xxxxxxxxxxxxx"
+    }
+    ```
+
+    Verify at [polar.sh/yourusername](https://polar.sh) that license is active.
+  </Accordion>
+
+  <Accordion icon="circle-exclamation" title="npx command fails">
+    Use global install instead:
+
+    ```bash
+    npm install -g storybook-mcp
+    ```
+
+    Then update config:
+    ```json
+    {
+      "command": "storybook-mcp",
+      "args": []
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Performance
+
+<Info>
+  Claude Desktop loads MCP servers on startup. Large projects may take 5-10 seconds to initialize.
+</Info>
+
+For faster startup:
+1. Use specific `componentPatterns` in config
+2. Exclude large directories with `excludePatterns`
+3. For monorepos, create separate configs per library
+
+## Security
+
+<Warning>
+  MCP servers run with your user's permissions. Only install trusted MCPs.
+</Warning>
+
+Storybook MCP:
+- Only reads/writes files in your project directory
+- Never accesses network (except license validation)
+- Open source - audit at [github.com/yourusername/storybook-mcp](https://github.com)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="play" href="/quickstart">
+    5-minute tutorial
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration">
+    Configure for your project
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/overview">
+    Explore all tools
+  </Card>
+  <Card title="Examples" icon="lightbulb" href="https://github.com/yourusername/storybook-mcp/tree/main/examples">
+    Real-world examples
+  </Card>
+</CardGroup>

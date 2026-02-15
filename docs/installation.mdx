@@ -1,0 +1,199 @@
+---
+title: 'Installation'
+description: 'Complete installation guide for Storybook MCP'
+---
+
+## System Requirements
+
+<CardGroup cols={2}>
+  <Card title="Node.js" icon="node-js">
+    Node.js 18.x or higher
+  </Card>
+  <Card title="React" icon="react">
+    React 18+ with React DOM
+  </Card>
+  <Card title="Storybook" icon="book">
+    Storybook 10+ (earlier versions not supported)
+  </Card>
+  <Card title="Package Manager" icon="box">
+    npm, pnpm, yarn, or bun
+  </Card>
+</CardGroup>
+
+## Install Storybook First
+
+<Warning>
+  Storybook MCP requires Storybook 10+. Install or upgrade Storybook before installing the MCP.
+</Warning>
+
+<Steps>
+  <Step title="Initialize Storybook">
+    If you don't have Storybook yet:
+    ```bash
+    npx storybook@latest init
+    ```
+    This will:
+    - Install Storybook packages
+    - Create `.storybook/` directory
+    - Add example stories
+    - Configure your builder (Vite/Webpack)
+  </Step>
+
+  <Step title="Verify Storybook Version">
+    Check your Storybook version:
+    ```bash
+    npm list storybook
+    ```
+    Should show `storybook@10.x.x` or higher
+  </Step>
+
+  <Step title="Test Storybook">
+    Run Storybook to verify it works:
+    ```bash
+    npm run storybook
+    ```
+  </Step>
+</Steps>
+
+## Install Storybook MCP
+
+<CodeGroup>
+```bash npm
+npm install forgekit-storybook-mcp
+```
+
+```bash pnpm
+pnpm add forgekit-storybook-mcp
+```
+
+```bash yarn
+yarn add forgekit-storybook-mcp
+```
+
+```bash bun
+bun add forgekit-storybook-mcp
+```
+</CodeGroup>
+
+## Install Optional Dependencies
+
+<Tabs>
+  <Tab title="Testing Libraries">
+    For test generation (Pro feature):
+
+    ```bash
+    # Vitest + Testing Library
+    npm i -D vitest @testing-library/react @testing-library/user-event @testing-library/jest-dom
+
+    # OR Playwright
+    npm i -D @playwright/test
+    ```
+  </Tab>
+
+  <Tab title="Storybook Addons">
+    Recommended addons for enhanced functionality:
+
+    ```bash
+    # Accessibility testing
+    npm i -D @storybook/addon-a11y
+
+    # Interaction testing
+    npm i -D @storybook/addon-interactions
+
+    # MSW for API mocking
+    npm i -D msw msw-storybook-addon
+    ```
+  </Tab>
+
+  <Tab title="Router Support">
+    For components using React Router:
+
+    ```bash
+    npm i -D storybook-addon-remix-react-router
+    ```
+  </Tab>
+</Tabs>
+
+## Verify Installation
+
+Run a health check to verify everything is installed correctly:
+
+```bash
+# Using npx
+npx forgekit-storybook-mcp --init-only
+
+# Or add to MCP client and run check_health tool
+```
+
+Expected output:
+```json
+{
+  "passed": true,
+  "checks": [
+    { "name": "package:storybook", "status": "pass" },
+    { "name": "package:@storybook/react", "status": "pass" },
+    { "name": "config:.storybook/main", "status": "pass" }
+  ]
+}
+```
+
+## Common Installation Issues
+
+<AccordionGroup>
+  <Accordion icon="triangle-exclamation" title="Storybook version too old">
+    **Error:** "Storybook 10+ required"
+
+    **Solution:**
+    ```bash
+    # Upgrade Storybook
+    npx storybook@latest upgrade
+    ```
+  </Accordion>
+
+  <Accordion icon="triangle-exclamation" title="Missing React 18">
+    **Error:** "React 18+ required"
+
+    **Solution:**
+    ```bash
+    npm install react@^18 react-dom@^18
+    ```
+  </Accordion>
+
+  <Accordion icon="triangle-exclamation" title="Type errors with Storybook">
+    **Error:** Type conflicts between Storybook versions
+
+    **Solution:**
+    ```bash
+    # Remove node_modules and reinstall
+    rm -rf node_modules package-lock.json
+    npm install
+    ```
+  </Accordion>
+
+  <Accordion icon="triangle-exclamation" title="MCP not found in client">
+    **Error:** MCP server not showing in Claude/Cursor
+
+    **Solution:**
+    - Verify MCP config file location
+    - Restart your MCP client
+    - Check Node.js is in PATH
+    - Try absolute path to npx
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/configuration">
+    Configure for your project structure
+  </Card>
+  <Card title="MCP Client Setup" icon="plug" href="/mcp-setup/cursor">
+    Connect to Claude, Cursor, or other clients
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Generate your first story
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/overview">
+    Explore all tools
+  </Card>
+</CardGroup>

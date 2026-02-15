@@ -1,0 +1,198 @@
+---
+title: 'Configuration'
+description: 'Configure Storybook MCP for your project structure'
+---
+
+## Configuration Options
+
+Storybook MCP can be configured in three ways (in order of priority):
+
+1. **Config file** (recommended)
+2. **package.json**
+3. **Auto-detection** (fallback)
+
+## Option 1: Config File (Recommended)
+
+Create `storybook-mcp.config.json` in your project root:
+
+```json storybook-mcp.config.json
+{
+  "framework": "chakra",
+  "libraries": [
+    {
+      "name": "ui",
+      "path": "libs/ui/src",
+      "storyTitlePrefix": "UI",
+      "importAlias": "@ui"
+    }
+  ],
+  "licenseKey": "your-polar-license-key"
+}
+```
+
+## Configuration Reference
+
+<ParamField path="rootDir" type="string" default="auto-detected">
+  Project root directory. Auto-detected from where MCP is run.
+</ParamField>
+
+<ParamField path="framework" type="string" default="vanilla">
+  UI framework for optimized story generation.
+
+  Options: `chakra`, `shadcn`, `tamagui`, `gluestack`, `react-native`, `vanilla`, `custom`
+</ParamField>
+
+<ParamField path="libraries" type="array" required>
+  Component library locations.
+
+  <Expandable title="Library Configuration">
+    <ResponseField name="name" type="string" required>
+      Library identifier for filtering
+    </ResponseField>
+    <ResponseField name="path" type="string" required>
+      Path relative to rootDir
+    </ResponseField>
+    <ResponseField name="storyTitlePrefix" type="string" required>
+      Prefix for Storybook titles (e.g., "UI" → "UI/Button")
+    </ResponseField>
+    <ResponseField name="decorators" type="string[]">
+      Default decorators for all stories
+    </ResponseField>
+    <ResponseField name="importAlias" type="string">
+      Import path alias (e.g., "@ui")
+    </ResponseField>
+  </Expandable>
+</ParamField>
+
+<ParamField path="storyFilePattern" type="string" default="**/*.stories.{ts,tsx}">
+  Glob pattern for story files
+</ParamField>
+
+<ParamField path="componentPatterns" type="string[]" default='["**/*.tsx", "!**/*.stories.tsx", "!**/*.test.tsx"]'>
+  Glob patterns for component files
+</ParamField>
+
+<ParamField path="excludePatterns" type="string[]" default='["**/node_modules/**", "**/dist/**"]'>
+  Directories to exclude from scanning
+</ParamField>
+
+<ParamField path="licenseKey" type="string">
+  Pro license key from Polar.sh
+</ParamField>
+
+<ParamField path="templatesDir" type="string">
+  Custom templates directory (advanced)
+</ParamField>
+
+<ParamField path="storybookVersion" type="number" default="10">
+  Storybook version (10+ required)
+</ParamField>
+
+## Common Configurations
+
+<CodeGroup>
+```json Monorepo with Nx
+{
+  "framework": "chakra",
+  "libraries": [
+    {
+      "name": "ui",
+      "path": "libs/ui/src",
+      "storyTitlePrefix": "UI Components",
+      "importAlias": "@myapp/ui"
+    },
+    {
+      "name": "shared",
+      "path": "libs/shared/src",
+      "storyTitlePrefix": "Shared",
+      "importAlias": "@myapp/shared"
+    }
+  ]
+}
+```
+
+```json Single Library
+{
+  "framework": "shadcn",
+  "libraries": [
+    {
+      "name": "components",
+      "path": "src/components",
+      "storyTitlePrefix": "Components"
+    }
+  ]
+}
+```
+
+```json React Native
+{
+  "framework": "react-native",
+  "libraries": [
+    {
+      "name": "mobile",
+      "path": "src/components",
+      "storyTitlePrefix": "Mobile"
+    }
+  ]
+}
+```
+</CodeGroup>
+
+## Option 2: package.json
+
+Add configuration to your `package.json`:
+
+```json package.json
+{
+  "name": "my-app",
+  "storybook-mcp": {
+    "framework": "tamagui",
+    "libraries": [
+      {
+        "name": "ui",
+        "path": "src/components",
+        "storyTitlePrefix": "UI"
+      }
+    ]
+  }
+}
+```
+
+## Option 3: Auto-Detection
+
+If no config is found, Storybook MCP will:
+
+- **Detect framework** from package.json dependencies
+- **Find components** in common directories:
+  - `src/components`
+  - `components`
+  - `lib/components`
+  - `libs/*/src`
+  - `packages/*/src`
+
+<Info>
+  Auto-detection works well for simple projects but explicit configuration is recommended for monorepos.
+</Info>
+
+## Environment Variables
+
+Override configuration with environment variables:
+
+```bash
+# License key
+export STORYBOOK_MCP_LICENSE=your-license-key
+
+# Framework override
+export STORYBOOK_MCP_FRAMEWORK=chakra
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="CLI Flags" icon="terminal" href="/features/cli-flags">
+    Learn command-line options
+  </Card>
+  <Card title="MCP Client Setup" icon="plug" href="/mcp-setup/cursor">
+    Connect to your AI assistant
+  </Card>
+</CardGroup>

@@ -1,0 +1,397 @@
+---
+title: 'CLI Flags'
+description: 'Command-line options for Storybook MCP'
+---
+
+## Global Options
+
+Available for all commands:
+
+<ParamField path="--config" type="string">
+  Path to custom config file
+
+  ```bash
+  npx storybook-mcp --config ./custom-config.json
+  ```
+</ParamField>
+
+<ParamField path="--license" type="string">
+  Pro license key (or use STORYBOOK_MCP_LICENSE env var)
+
+  ```bash
+  npx storybook-mcp --license your-key-here
+  ```
+</ParamField>
+
+<ParamField path="--verbose" type="boolean">
+  Enable debug logging
+
+  ```bash
+  npx storybook-mcp --verbose sync-all
+  ```
+</ParamField>
+
+<ParamField path="--version" type="boolean">
+  Show version number
+
+  ```bash
+  npx storybook-mcp --version
+  ```
+</ParamField>
+
+<ParamField path="--help" type="boolean">
+  Show help
+
+  ```bash
+  npx storybook-mcp --help
+  ```
+</ParamField>
+
+## Commands
+
+### init
+
+Initialize Storybook MCP in your project:
+
+```bash
+npx storybook-mcp init [options]
+```
+
+<ParamField path="--framework" type="string">
+  Force framework detection
+
+  ```bash
+  npx storybook-mcp init --framework chakra
+  ```
+
+  Options: `chakra`, `shadcn`, `tamagui`, `gluestack`, `react-native`, `vanilla`, `custom`
+</ParamField>
+
+<ParamField path="--skip-install" type="boolean">
+  Skip npm package installation
+
+  ```bash
+  npx storybook-mcp init --skip-install
+  ```
+</ParamField>
+
+<ParamField path="--force" type="boolean">
+  Overwrite existing configuration
+
+  ```bash
+  npx storybook-mcp init --force
+  ```
+</ParamField>
+
+### sync-all
+
+Sync all components at once:
+
+```bash
+npx storybook-mcp sync-all [options]
+```
+
+<ParamField path="--library" type="string">
+  Only sync specific library
+
+  ```bash
+  npx storybook-mcp sync-all --library ui
+  ```
+</ParamField>
+
+<ParamField path="--stories" type="boolean" default="true">
+  Generate story files
+
+  ```bash
+  npx storybook-mcp sync-all --no-stories
+  ```
+</ParamField>
+
+<ParamField path="--tests" type="boolean" default="false">
+  Generate test files (Pro only)
+
+  ```bash
+  npx storybook-mcp sync-all --tests
+  ```
+</ParamField>
+
+<ParamField path="--docs" type="boolean" default="false">
+  Generate MDX documentation (Pro only)
+
+  ```bash
+  npx storybook-mcp sync-all --docs
+  ```
+</ParamField>
+
+<ParamField path="--update" type="boolean" default="true">
+  Update existing files when components change
+
+  ```bash
+  npx storybook-mcp sync-all --no-update
+  ```
+</ParamField>
+
+<ParamField path="--dry-run" type="boolean">
+  Preview without writing files
+
+  ```bash
+  npx storybook-mcp sync-all --dry-run
+  ```
+</ParamField>
+
+<ParamField path="--watch" type="boolean">
+  Watch for changes and auto-sync
+
+  ```bash
+  npx storybook-mcp sync-all --watch
+  ```
+</ParamField>
+
+### sync
+
+Sync a single component:
+
+```bash
+npx storybook-mcp sync <path> [options]
+```
+
+```bash
+npx storybook-mcp sync src/components/Button.tsx --tests --docs
+```
+
+Options: Same as `sync-all` (except `--library`)
+
+### list
+
+List all components:
+
+```bash
+npx storybook-mcp list [options]
+```
+
+<ParamField path="--library" type="string">
+  Filter by library
+
+  ```bash
+  npx storybook-mcp list --library ui
+  ```
+</ParamField>
+
+<ParamField path="--has-story" type="boolean">
+  Only show components with stories
+
+  ```bash
+  npx storybook-mcp list --has-story
+  ```
+</ParamField>
+
+<ParamField path="--no-story" type="boolean">
+  Only show components without stories
+
+  ```bash
+  npx storybook-mcp list --no-story
+  ```
+</ParamField>
+
+<ParamField path="--json" type="boolean">
+  Output as JSON
+
+  ```bash
+  npx storybook-mcp list --json > components.json
+  ```
+</ParamField>
+
+### analyze
+
+Analyze a component:
+
+```bash
+npx storybook-mcp analyze <path>
+```
+
+```bash
+npx storybook-mcp analyze src/components/Button.tsx
+```
+
+### validate
+
+Validate a story file:
+
+```bash
+npx storybook-mcp validate <path>
+```
+
+```bash
+npx storybook-mcp validate src/components/Button.stories.tsx
+```
+
+### health
+
+Check Storybook installation:
+
+```bash
+npx storybook-mcp health
+```
+
+Checks:
+- Storybook installation
+- Required addons
+- Framework configuration
+- Story file patterns
+
+### coverage
+
+Show story coverage statistics:
+
+```bash
+npx storybook-mcp coverage [options]
+```
+
+<ParamField path="--library" type="string">
+  Filter by library
+
+  ```bash
+  npx storybook-mcp coverage --library ui
+  ```
+</ParamField>
+
+<ParamField path="--format" type="string" default="table">
+  Output format: `table`, `json`, `csv`
+
+  ```bash
+  npx storybook-mcp coverage --format json
+  ```
+</ParamField>
+
+### suggest
+
+Get component suggestions:
+
+```bash
+npx storybook-mcp suggest [options]
+```
+
+<ParamField path="--limit" type="number" default="10">
+  Max suggestions
+
+  ```bash
+  npx storybook-mcp suggest --limit 20
+  ```
+</ParamField>
+
+<ParamField path="--library" type="string">
+  Filter by library
+
+  ```bash
+  npx storybook-mcp suggest --library ui
+  ```
+</ParamField>
+
+## Environment Variables
+
+Override options with environment variables:
+
+```bash
+# License key
+export STORYBOOK_MCP_LICENSE=your-license-key
+
+# Framework
+export STORYBOOK_MCP_FRAMEWORK=chakra
+
+# Config path
+export STORYBOOK_MCP_CONFIG=./custom-config.json
+
+# Enable verbose logging
+export STORYBOOK_MCP_VERBOSE=true
+```
+
+## Examples
+
+<AccordionGroup>
+  <Accordion icon="rocket" title="Quick start">
+    ```bash
+    # Initialize and sync all
+    npx storybook-mcp init
+    npx storybook-mcp sync-all
+    ```
+  </Accordion>
+
+  <Accordion icon="filter" title="Selective sync">
+    ```bash
+    # Only sync UI library without tests
+    npx storybook-mcp sync-all --library ui --no-tests
+    ```
+  </Accordion>
+
+  <Accordion icon="eye" title="Preview before writing">
+    ```bash
+    # Dry-run to see what would be generated
+    npx storybook-mcp sync-all --dry-run
+
+    # If looks good, run for real
+    npx storybook-mcp sync-all
+    ```
+  </Accordion>
+
+  <Accordion icon="clock" title="Watch mode">
+    ```bash
+    # Auto-sync on file changes
+    npx storybook-mcp sync-all --watch
+    ```
+  </Accordion>
+
+  <Accordion icon="star" title="Pro features">
+    ```bash
+    # Generate everything (Pro license)
+    npx storybook-mcp sync-all --stories --tests --docs
+    ```
+  </Accordion>
+
+  <Accordion icon="download" title="Export data">
+    ```bash
+    # Export component list to JSON
+    npx storybook-mcp list --json > components.json
+
+    # Export coverage report to CSV
+    npx storybook-mcp coverage --format csv > coverage.csv
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Shell Completion
+
+Enable shell completion for better DX:
+
+<CodeGroup>
+```bash Bash
+# Add to ~/.bashrc
+eval "$(npx storybook-mcp completion bash)"
+```
+
+```zsh Zsh
+# Add to ~/.zshrc
+eval "$(npx storybook-mcp completion zsh)"
+```
+
+```fish Fish
+# Add to ~/.config/fish/config.fish
+npx storybook-mcp completion fish | source
+```
+</CodeGroup>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/configuration">
+    Config file reference
+  </Card>
+  <Card title="MCP Setup" icon="plug" href="/mcp-setup/cursor">
+    Use with AI assistants
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/overview">
+    Programmatic API
+  </Card>
+  <Card title="Auto-Sync" icon="arrows-rotate" href="/features/auto-sync">
+    Auto-sync features
+  </Card>
+</CardGroup>

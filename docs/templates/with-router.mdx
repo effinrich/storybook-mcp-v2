@@ -1,0 +1,492 @@
+---
+title: 'with-router Template'
+description: 'Components using React Router'
+---
+
+## Overview
+
+The `with-router` template generates stories for components that use React Router hooks like `useNavigate`, `useParams`, or `Link` components.
+
+**Use this when:**
+- Component uses `useNavigate`, `useParams`, `useLocation`
+- Component renders `<Link>` or `<NavLink>` components
+- Component depends on router context
+- Need to test navigation behavior
+
+## Requirements
+
+```bash
+npm install react-router-dom
+npm install --save-dev storybook-addon-react-router-v6
+```
+
+Configure in `.storybook/main.ts`:
+
+```typescript
+export default {
+  addons: [
+    '@storybook/addon-essentials',
+    'storybook-addon-react-router-v6',
+  ],
+}
+```
+
+## Generated Output
+
+```tsx Example
+import type { Meta, StoryObj } from '@storybook/react'
+import { withRouter } from 'storybook-addon-react-router-v6'
+import { UserProfile } from './UserProfile'
+
+const meta: Meta<typeof UserProfile> = {
+  title: 'Pages/UserProfile',
+  component: UserProfile,
+  tags: ['autodocs'],
+  decorators: [withRouter],
+  parameters: {
+    reactRouter: {
+      routePath: '/users/:id',
+      routeParams: { id: '123' },
+    },
+  },
+}
+
+export default meta
+type Story = StoryObj<typeof UserProfile>
+
+export const Default: Story = {
+  parameters: {
+    reactRouter: {
+      routeParams: { id: '123' },
+    },
+  },
+}
+
+export const DifferentUser: Story = {
+  parameters: {
+    reactRouter: {
+      routeParams: { id: '456' },
+    },
+  },
+}
+
+export const WithQueryParams: Story = {
+  parameters: {
+    reactRouter: {
+      routeParams: { id: '123' },
+      searchParams: { tab: 'posts', sort: 'recent' },
+    },
+  },
+}
+
+export const NotFound: Story = {
+  parameters: {
+    reactRouter: {
+      routeParams: { id: 'invalid' },
+    },
+  },
+}
+```
+
+## What's Included
+
+<Check>Router decorator setup</Check>
+<Check>Route path configuration</Check>
+<Check>Route params examples</Check>
+<Check>Query params examples</Check>
+<Check>Navigation testing</Check>
+<Check>Link components</Check>
+
+## Router Hook Support
+
+<Tabs>
+  <Tab title="useParams">
+    ```tsx Component
+    const UserProfile = () => {
+      const { id } = useParams()
+
+      return <div>User ID: {id}</div>
+    }
+    ```
+
+    Generated story:
+    ```tsx
+    export const Default: Story = {
+      parameters: {
+        reactRouter: {
+          routePath: '/users/:id',
+          routeParams: { id: '123' },
+        },
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="useNavigate">
+    ```tsx Component
+    const UserProfile = () => {
+      const navigate = useNavigate()
+
+      return (
+        <button onClick={() => navigate('/home')}>
+          Go Home
+        </button>
+      )
+    }
+    ```
+
+    Generated story includes play function:
+    ```tsx
+    import { userEvent, within } from '@storybook/test'
+
+    export const NavigationTest: Story = {
+      play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement)
+        const button = canvas.getByText(/go home/i)
+
+        await userEvent.click(button)
+        // Navigation is mocked in Storybook
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="useLocation">
+    ```tsx Component
+    const UserProfile = () => {
+      const location = useLocation()
+
+      return <div>Current path: {location.pathname}</div>
+    }
+    ```
+
+    Generated story:
+    ```tsx
+    export const CustomLocation: Story = {
+      parameters: {
+        reactRouter: {
+          location: {
+            pathname: '/users/123/posts',
+            search: '?sort=recent',
+          },
+        },
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="useSearchParams">
+    ```tsx Component
+    const UserProfile = () => {
+      const [searchParams] = useSearchParams()
+      const tab = searchParams.get('tab')
+
+      return <div>Current tab: {tab}</div>
+    }
+    ```
+
+    Generated story:
+    ```tsx
+    export const WithQueryParams: Story = {
+      parameters: {
+        reactRouter: {
+          searchParams: { tab: 'posts', sort: 'recent' },
+        },
+      },
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Link Components
+
+Stories automatically include navigation examples:
+
+```tsx
+import { Link, NavLink } from 'react-router-dom'
+
+export const WithLinks: Story = {
+  render: () => (
+    <div>
+      <Link to="/home">Home</Link>
+      <Link to="/about">About</Link>
+      <NavLink to="/profile" className={({ isActive }) => isActive ? 'active' : ''}>
+        Profile
+      </NavLink>
+    </div>
+  ),
+}
+```
+
+## Navigation Testing
+
+Test navigation flows with play functions:
+
+```tsx
+import { expect, userEvent, within } from '@storybook/test'
+
+export const NavigationFlow: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+
+    // Click a link
+    const profileLink = canvas.getByText(/profile/i)
+    await userEvent.click(profileLink)
+
+    // In real router, would navigate
+    // In Storybook, navigation is mocked
+    await expect(profileLink).toHaveAttribute('href', '/profile')
+  },
+}
+```
+
+## Nested Routes
+
+Handle nested route structures:
+
+```tsx
+export const NestedRoute: Story = {
+  parameters: {
+    reactRouter: {
+      routePath: '/users/:userId/posts/:postId',
+      routeParams: {
+        userId: '123',
+        postId: '456',
+      },
+    },
+  },
+}
+```
+
+## Usage
+
+<CodeGroup>
+```json MCP Tool
+{
+  "componentPath": "src/pages/UserProfile.tsx",
+  "template": "with-router"
+}
+```
+
+```bash CLI
+npx storybook-mcp sync src/pages/UserProfile.tsx --template with-router
+```
+</CodeGroup>
+
+## Advanced Examples
+
+<Tabs>
+  <Tab title="Protected Routes">
+    ```tsx
+    import { withRouter } from 'storybook-addon-react-router-v6'
+
+    const meta: Meta<typeof ProtectedPage> = {
+      decorators: [
+        withRouter,
+        (Story) => (
+          <AuthProvider isAuthenticated={true}>
+            <Story />
+          </AuthProvider>
+        ),
+      ],
+    }
+
+    export const Authenticated: Story = {
+      parameters: {
+        reactRouter: {
+          routePath: '/dashboard',
+        },
+      },
+    }
+
+    export const Unauthenticated: Story = {
+      decorators: [
+        (Story) => (
+          <AuthProvider isAuthenticated={false}>
+            <Story />
+          </AuthProvider>
+        ),
+      ],
+    }
+    ```
+  </Tab>
+
+  <Tab title="Breadcrumbs">
+    ```tsx
+    export const DeepNavigation: Story = {
+      parameters: {
+        reactRouter: {
+          routePath: '/dashboard/users/:userId/posts/:postId/comments',
+          routeParams: {
+            userId: '123',
+            postId: '456',
+          },
+          location: {
+            pathname: '/dashboard/users/123/posts/456/comments',
+          },
+        },
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="Hash Routing">
+    ```tsx
+    export const HashRoute: Story = {
+      parameters: {
+        reactRouter: {
+          location: {
+            pathname: '/users/123',
+            hash: '#profile',
+          },
+        },
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="Programmatic Navigation">
+    ```tsx
+    import { expect, userEvent, within } from '@storybook/test'
+
+    export const RedirectAfterAction: Story = {
+      play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement)
+
+        // Fill form
+        const input = canvas.getByRole('textbox')
+        await userEvent.type(input, 'Test value')
+
+        // Submit (triggers navigate('/success'))
+        const button = canvas.getByRole('button', { name: /submit/i })
+        await userEvent.click(button)
+
+        // Verify navigation was called
+        // (actual navigation is mocked in Storybook)
+      },
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion icon="route" title="Match production routes">
+    Use actual route paths from your app:
+
+    ```tsx
+    // ✅ Good - matches app routing
+    routePath: '/users/:id/posts'
+
+    // ❌ Bad - doesn't match app
+    routePath: '/test/:id'
+    ```
+  </Accordion>
+
+  <Accordion icon="database" title="Use realistic params">
+    Generate realistic IDs and params:
+
+    ```tsx
+    // ✅ Good - realistic user ID
+    routeParams: { id: '550e8400-e29b-41d4-a716-446655440000' }
+
+    // ❌ Bad - test data
+    routeParams: { id: 'test' }
+    ```
+  </Accordion>
+
+  <Accordion icon="play" title="Test all navigation paths">
+    Create stories for each navigation scenario:
+
+    ```tsx
+    export const FromHomePage: Story = { /* ... */ }
+    export const FromSearchResults: Story = { /* ... */ }
+    export const DirectLink: Story = { /* ... */ }
+    ```
+  </Accordion>
+
+  <Accordion icon="shield-check" title="Test edge cases">
+    Include invalid routes and missing params:
+
+    ```tsx
+    export const InvalidUser: Story = {
+      parameters: {
+        reactRouter: {
+          routeParams: { id: 'invalid' },
+        },
+      },
+    }
+
+    export const MissingParam: Story = {
+      parameters: {
+        reactRouter: {
+          routeParams: {},
+        },
+      },
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion icon="circle-exclamation" title="useNavigate() hook error">
+    **Error:** "useNavigate() may be used only in the context of a `<Router>` component"
+
+    **Solution:**
+
+    Ensure `withRouter` decorator is applied:
+
+    ```tsx
+    const meta: Meta<typeof Component> = {
+      decorators: [withRouter], // ← Required
+    }
+    ```
+  </Accordion>
+
+  <Accordion icon="circle-exclamation" title="Route params not working">
+    **Solution:**
+
+    Verify both `routePath` and `routeParams` are set:
+
+    ```tsx
+    parameters: {
+      reactRouter: {
+        routePath: '/users/:id', // ← Define pattern
+        routeParams: { id: '123' }, // ← Provide values
+      },
+    }
+    ```
+  </Accordion>
+
+  <Accordion icon="circle-exclamation" title="Links not clickable">
+    **Solution:**
+
+    Links in Storybook won't actually navigate. Use play functions to test:
+
+    ```tsx
+    play: async ({ canvasElement }) => {
+      const link = within(canvasElement).getByRole('link')
+      await expect(link).toHaveAttribute('href', '/expected-path')
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Related Templates
+
+Combine router with other features:
+
+<CardGroup cols={2}>
+  <Card title="with-msw" icon="server" href="/templates/with-msw">
+    Mock API calls triggered by route changes
+  </Card>
+  <Card title="interactive" icon="hand-pointer" href="/templates/interactive">
+    Test navigation interactions
+  </Card>
+  <Card title="page" icon="browser" href="/templates/page">
+    Full page layouts with routing
+  </Card>
+</CardGroup>

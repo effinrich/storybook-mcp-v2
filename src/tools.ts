@@ -10,7 +10,10 @@ import { validateStory } from './utils/validator.js'
 import { getTemplate, getTemplates } from './utils/templates.js'
 import { generateTest, writeTestFile } from './utils/test-generator.js'
 import { generateDocs, writeDocsFile } from './utils/docs-generator.js'
-import { initializeComponents, syncSingleComponent } from './utils/initializer.js'
+import {
+  initializeComponents,
+  syncSingleComponent
+} from './utils/initializer.js'
 import { validateLicense, requireFeature } from './utils/license.js'
 import { runPreflight } from './utils/preflight.js'
 
@@ -27,7 +30,7 @@ export async function listComponents(
 ) {
   const components = await scanComponents(config, {
     library: args.library,
-    hasStory: args.hasStory,
+    hasStory: args.hasStory
   })
 
   const withStories = components.filter(c => c.hasStory)
@@ -38,7 +41,7 @@ export async function listComponents(
     total: components.length,
     withStories: withStories.length,
     withoutStories: withoutStories.length,
-    summary: `Found ${components.length} components: ${withStories.length} with stories, ${withoutStories.length} without stories`,
+    summary: `Found ${components.length} components: ${withStories.length} with stories, ${withoutStories.length} without stories`
   }
 }
 
@@ -57,7 +60,7 @@ export async function analyzeComponentTool(
   return {
     analysis,
     summary: `Analyzed ${analysis.name}: ${analysis.props.length} props, ${analysis.hasStory ? 'has story' : 'no story'}`,
-    recommendations: analysis.suggestions,
+    recommendations: analysis.suggestions
   }
 }
 
@@ -80,7 +83,7 @@ export async function generateStoryTool(
 ) {
   // Check license
   const license = validateLicense(config)
-  
+
   // Check template restrictions
   if (args.template && args.template !== 'basic') {
     requireFeature('advanced_templates', license)
@@ -89,16 +92,23 @@ export async function generateStoryTool(
   // First analyze the component
   const analysis = await analyzeComponent(config, args.componentPath)
 
-  // Generate the story
-  const story = await generateStory(config, analysis, {
+  // Prepare story generation options with proper typing
+  const storyOptions: StoryGenerationOptions = {
     componentPath: args.componentPath,
     includeVariants: args.includeVariants ?? true,
     includeInteractive: args.includeInteractive ?? true,
     includeA11y: args.includeA11y ?? false,
     includeResponsive: args.includeResponsive ?? false,
-    template: args.template as StoryGenerationOptions['template'],
-    overwrite: args.overwrite ?? false,
-  })
+    overwrite: args.overwrite ?? false
+  }
+
+  // Add template if provided (already validated for license)
+  if (args.template) {
+    storyOptions.template = args.template as StoryGenerationOptions['template']
+  }
+
+  // Generate the story
+  const story = await generateStory(config, analysis, storyOptions)
 
   // Write to disk unless dry run
   let written = false
@@ -114,7 +124,7 @@ export async function generateStoryTool(
       ? `Generated story for ${analysis.name} (dry run - not written)`
       : written
         ? `Created story at ${story.filePath}`
-        : `Story already exists at ${story.filePath} (use overwrite: true to replace)`,
+        : `Story already exists at ${story.filePath} (use overwrite: true to replace)`
   }
 }
 
@@ -134,7 +144,7 @@ export async function validateStoryTool(
     validation,
     summary: validation.valid
       ? `Story is valid (score: ${validation.score}/100)`
-      : `Story has ${validation.errors.length} errors (score: ${validation.score}/100)`,
+      : `Story has ${validation.errors.length} errors (score: ${validation.score}/100)`
   }
 }
 
@@ -160,13 +170,13 @@ export async function getStoryTemplate(
     const available = Array.from(getTemplates().keys())
     return {
       error: `Template '${args.template}' not found`,
-      availableTemplates: available,
+      availableTemplates: available
     }
   }
 
   return {
     template,
-    usage: `Replace placeholders: ${template.placeholders.join(', ')}`,
+    usage: `Replace placeholders: ${template.placeholders.join(', ')}`
   }
 }
 
@@ -181,16 +191,16 @@ export async function listTemplates(config: StorybookMCPConfig) {
 
   // Filter templates based on license
   const templates = getTemplates()
-  const list = Array.from(templates.entries())
-    .map(([name, template]) => {
-      const isBasic = name === 'basic'
-      return {
-        name,
-        description: template.description + (isBasic || isPro ? '' : ' (Pro Only)'),
-        useCase: template.useCase,
-        available: isBasic || isPro
-      }
-    })
+  const list = Array.from(templates.entries()).map(([name, template]) => {
+    const isBasic = name === 'basic'
+    return {
+      name,
+      description:
+        template.description + (isBasic || isPro ? '' : ' (Pro Only)'),
+      useCase: template.useCase,
+      available: isBasic || isPro
+    }
+  })
 
   return {
     templates: list,
@@ -210,14 +220,15 @@ export async function getComponentCoverage(
   }
 ) {
   const components = await scanComponents(config, {
-    library: args?.library,
+    library: args?.library
   })
 
   const withStories = components.filter(c => c.hasStory)
   const withoutStories = components.filter(c => !c.hasStory)
-  const coverage = components.length > 0
-    ? Math.round((withStories.length / components.length) * 100)
-    : 0
+  const coverage =
+    components.length > 0
+      ? Math.round((withStories.length / components.length) * 100)
+      : 0
 
   // Group by library
   const byLibrary: Record<string, { total: number; withStories: number }> = {}
@@ -226,7 +237,7 @@ export async function getComponentCoverage(
     const libWithStories = libComponents.filter(c => c.hasStory)
     byLibrary[lib.name] = {
       total: libComponents.length,
-      withStories: libWithStories.length,
+      withStories: libWithStories.length
     }
   }
 
@@ -239,8 +250,8 @@ export async function getComponentCoverage(
     componentsNeedingStories: withoutStories.map(c => ({
       name: c.name,
       path: c.filePath,
-      library: c.library,
-    })),
+      library: c.library
+    }))
   }
 }
 
@@ -257,7 +268,7 @@ export async function suggestStories(
 ) {
   const components = await scanComponents(config, {
     library: args?.library,
-    hasStory: false,
+    hasStory: false
   })
 
   const limit = args?.limit ?? 10
@@ -268,11 +279,11 @@ export async function suggestStories(
       component: c.name,
       path: c.filePath,
       library: c.library,
-      command: `generate_story with componentPath: "${c.filePath}"`,
+      command: `generate_story with componentPath: "${c.filePath}"`
     })),
     total: components.length,
     showing: suggestions.length,
-    summary: `${components.length} components without stories. Showing top ${suggestions.length}.`,
+    summary: `${components.length} components without stories. Showing top ${suggestions.length}.`
   }
 }
 
@@ -293,7 +304,7 @@ export async function syncAll(
 ) {
   // Check license for limits
   const license = validateLicense(config)
-  
+
   // If requesting features not allowed in free tier, warn/disable them
   const options = {
     library: args?.library,
@@ -301,28 +312,38 @@ export async function syncAll(
     generateTests: args?.generateTests ?? true,
     generateDocs: args?.generateDocs ?? true,
     updateExisting: args?.updateExisting ?? true,
-    dryRun: args?.dryRun ?? false,
+    dryRun: args?.dryRun ?? false
   }
 
   // Force disable Pro features if no license
   if (license.tier === 'free') {
-    if (options.generateTests) {
-      console.error('[storybook-mcp] Warning: Test generation disabled (Free Tier)')
+    if (typeof globalThis !== 'undefined' && options.generateTests) {
+      // eslint-disable-next-line no-console
+      globalThis.console?.warn?.(
+        '[storybook-mcp] Warning: Test generation disabled (Free Tier)'
+      )
       options.generateTests = false
     }
-    if (options.generateDocs) {
-      console.error('[storybook-mcp] Warning: Docs generation disabled (Free Tier)')
+    if (typeof globalThis !== 'undefined' && options.generateDocs) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        '[storybook-mcp] Warning: Docs generation disabled (Free Tier)'
+      )
       options.generateDocs = false
     }
   }
 
   const result = await initializeComponents(config, {
     ...options,
-    maxComponents: license.maxSyncLimit === Infinity ? undefined : license.maxSyncLimit,
+    maxComponents:
+      license.maxSyncLimit === Infinity ? undefined : license.maxSyncLimit
   })
 
   // Notify if sync limit was applied
-  if (license.tier === 'free' && result.scanned > (license.maxSyncLimit || Infinity)) {
+  if (
+    license.tier === 'free' &&
+    result.scanned > (license.maxSyncLimit || Infinity)
+  ) {
     return {
       ...result,
       summary: `Free Tier Limit: Synced first ${license.maxSyncLimit} of ${result.scanned} components. Upgrade to Pro for unlimited sync.`,
@@ -334,7 +355,7 @@ export async function syncAll(
     ...result,
     summary: args?.dryRun
       ? `Dry run: Would create ${result.created.stories + result.created.tests + result.created.docs} files, update ${result.updated.stories + result.updated.tests + result.updated.docs} files`
-      : `Synced ${result.scanned} components: Created ${result.created.stories} stories, ${result.created.tests} tests, ${result.created.docs} docs. Updated ${result.updated.stories + result.updated.tests + result.updated.docs} files.`,
+      : `Synced ${result.scanned} components: Created ${result.created.stories} stories, ${result.created.tests} tests, ${result.created.docs} docs. Updated ${result.updated.stories + result.updated.tests + result.updated.docs} files.`
   }
 }
 
@@ -356,18 +377,18 @@ export async function syncComponentTool(
     generateStories: args.generateStories ?? true,
     generateTests: args.generateTests ?? true,
     generateDocs: args.generateDocs ?? true,
-    dryRun: args.dryRun ?? false,
+    dryRun: args.dryRun ?? false
   })
 
   const actions = [
     result.story.action !== 'skipped' ? `story: ${result.story.action}` : null,
     result.test.action !== 'skipped' ? `test: ${result.test.action}` : null,
-    result.docs.action !== 'skipped' ? `docs: ${result.docs.action}` : null,
+    result.docs.action !== 'skipped' ? `docs: ${result.docs.action}` : null
   ].filter(Boolean)
 
   return {
     result,
-    summary: `${result.component}: ${actions.join(', ')}`,
+    summary: `${result.component}: ${actions.join(', ')}`
   }
 }
 
@@ -403,7 +424,7 @@ export async function generateTestTool(
       ? `Generated test for ${analysis.name} (dry run)`
       : written
         ? `Created test at ${test.filePath}`
-        : `Test already exists at ${test.filePath}`,
+        : `Test already exists at ${test.filePath}`
   }
 }
 
@@ -415,7 +436,7 @@ export async function checkHealthTool(config: StorybookMCPConfig) {
   const result = await runPreflight(config.rootDir)
   return {
     ...result,
-    summary: result.summary,
+    summary: result.summary
   }
 }
 
@@ -451,6 +472,6 @@ export async function generateDocsTool(
       ? `Generated docs for ${analysis.name} (dry run)`
       : written
         ? `Created docs at ${docs.filePath}`
-        : `Docs already exist at ${docs.filePath}`,
+        : `Docs already exist at ${docs.filePath}`
   }
 }

@@ -1,0 +1,358 @@
+---
+title: 'with-variants Template'
+description: 'Showcase all size and variant combinations'
+---
+
+## Overview
+
+The `with-variants` template is the **default template** for most components. It automatically detects size and variant props and generates comprehensive stories showcasing all combinations.
+
+**Use this when:**
+- Component has `size`, `variant`, or `colorScheme` props
+- Building a design system or component library
+- Need to visually test all prop combinations
+- Want comprehensive coverage without manual work
+
+## Generated Output
+
+```tsx Example
+import type { Meta, StoryObj } from '@storybook/react'
+import { Button } from './Button'
+
+const meta: Meta<typeof Button> = {
+  title: 'Components/Button',
+  component: Button,
+  tags: ['autodocs'],
+}
+
+export default meta
+type Story = StoryObj<typeof Button>
+
+export const Default: Story = {
+  args: {
+    children: 'Button',
+    variant: 'solid',
+    size: 'md',
+  },
+}
+
+export const Sizes: Story = {
+  render: () => (
+    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+      <Button size="sm">Small</Button>
+      <Button size="md">Medium</Button>
+      <Button size="lg">Large</Button>
+    </div>
+  ),
+}
+
+export const Variants: Story = {
+  render: () => (
+    <div style={{ display: 'flex', gap: '1rem' }}>
+      <Button variant="solid">Solid</Button>
+      <Button variant="outline">Outline</Button>
+      <Button variant="ghost">Ghost</Button>
+    </div>
+  ),
+}
+
+export const ColorSchemes: Story = {
+  render: () => (
+    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+      <Button colorScheme="blue">Blue</Button>
+      <Button colorScheme="red">Red</Button>
+      <Button colorScheme="green">Green</Button>
+    </div>
+  ),
+}
+
+export const AllCombinations: Story = {
+  render: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {(['sm', 'md', 'lg'] as const).map(size => (
+        <div key={size} style={{ display: 'flex', gap: '1rem' }}>
+          {(['solid', 'outline', 'ghost'] as const).map(variant => (
+            <Button key={variant} size={size} variant={variant}>
+              {size} {variant}
+            </Button>
+          ))}
+        </div>
+      ))}
+    </div>
+  ),
+}
+```
+
+## What's Included
+
+<Check>Default story with recommended props</Check>
+<Check>Size variations (sm, md, lg, xl)</Check>
+<Check>Variant combinations (solid, outline, ghost, link)</Check>
+<Check>Color schemes (if detected)</Check>
+<Check>All combinations matrix</Check>
+<Check>Disabled states</Check>
+<Check>Framework-specific layouts</Check>
+
+## Framework-Specific Code
+
+The template adapts based on your framework:
+
+<Tabs>
+  <Tab title="Chakra UI">
+    ```tsx
+    import { Stack, Button } from '@chakra-ui/react'
+
+    export const Sizes: Story = {
+      render: () => (
+        <Stack direction="row" spacing={4}>
+          <Button size="sm">Small</Button>
+          <Button size="md">Medium</Button>
+          <Button size="lg">Large</Button>
+        </Stack>
+      ),
+    }
+    ```
+
+    Uses `Stack` component for proper spacing and alignment.
+  </Tab>
+
+  <Tab title="Tamagui">
+    ```tsx
+    import { YStack, XStack, Button } from 'tamagui'
+
+    export const Sizes: Story = {
+      render: () => (
+        <XStack space="$4">
+          <Button size="$2">Small</Button>
+          <Button size="$4">Medium</Button>
+          <Button size="$6">Large</Button>
+        </XStack>
+      ),
+    }
+    ```
+
+    Uses `XStack` with Tamagui's theme tokens.
+  </Tab>
+
+  <Tab title="shadcn/ui">
+    ```tsx
+    import { Button } from '@/components/ui/button'
+
+    export const Variants: Story = {
+      render: () => (
+        <div className="flex gap-4">
+          <Button variant="default">Default</Button>
+          <Button variant="destructive">Destructive</Button>
+          <Button variant="outline">Outline</Button>
+          <Button variant="ghost">Ghost</Button>
+        </div>
+      ),
+    }
+    ```
+
+    Uses Tailwind utilities for layout.
+  </Tab>
+
+  <Tab title="Vanilla React">
+    ```tsx
+    export const Sizes: Story = {
+      render: () => (
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <Button size="sm">Small</Button>
+          <Button size="md">Medium</Button>
+          <Button size="lg">Large</Button>
+        </div>
+      ),
+    }
+    ```
+
+    Uses inline styles for maximum compatibility.
+  </Tab>
+</Tabs>
+
+## Prop Detection
+
+The template automatically detects these prop patterns:
+
+| Prop Name | Detected Values | Story Generated |
+|-----------|-----------------|-----------------|
+| `size` | sm, md, lg, xl | Sizes story |
+| `variant` | solid, outline, ghost, link | Variants story |
+| `colorScheme`, `color` | blue, red, green, etc. | ColorSchemes story |
+| `disabled` | boolean | Disabled story |
+| `isLoading`, `loading` | boolean | Loading story |
+
+## Advanced Features
+
+### Responsive Examples
+
+If component has responsive props, generates responsive stories:
+
+```tsx
+export const Responsive: Story = {
+  args: {
+    size: { base: 'sm', md: 'md', lg: 'lg' },
+  },
+}
+```
+
+### State Variations
+
+Generates stories for common states:
+
+```tsx
+export const States: Story = {
+  render: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <Button>Default</Button>
+      <Button disabled>Disabled</Button>
+      <Button isLoading>Loading</Button>
+    </div>
+  ),
+}
+```
+
+## Usage
+
+<CodeGroup>
+```json MCP Tool (Auto-Selected)
+{
+  "componentPath": "src/components/Button.tsx"
+}
+```
+
+```json MCP Tool (Explicit)
+{
+  "componentPath": "src/components/Button.tsx",
+  "template": "with-variants",
+  "includeVariants": true
+}
+```
+
+```bash CLI
+npx storybook-mcp sync src/components/Button.tsx
+```
+</CodeGroup>
+
+## Customization
+
+### Disable Specific Stories
+
+After generation, remove stories you don't need:
+
+```tsx
+// Keep only Default and Sizes
+export const Default: Story = { /* ... */ }
+export const Sizes: Story = { /* ... */ }
+
+// Delete these if not needed:
+// export const Variants: Story = { /* ... */ }
+// export const AllCombinations: Story = { /* ... */ }
+```
+
+### Add Custom Variants
+
+Extend with your own combinations:
+
+```tsx
+export const CustomCombination: Story = {
+  render: () => (
+    <div>
+      <Button size="lg" variant="solid" colorScheme="purple">
+        Special Button
+      </Button>
+    </div>
+  ),
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion icon="check" title="Let auto-detection work">
+    Don't override unless necessary. The template intelligently detects your props.
+  </Accordion>
+
+  <Accordion icon="grid" title="Keep combinations manageable">
+    If you have 5 sizes × 4 variants × 6 colors = 120 combinations, that's too many. Remove the AllCombinations story.
+  </Accordion>
+
+  <Accordion icon="eye" title="Review generated code">
+    Check that detected values match your actual prop types. If not, customize after generation.
+  </Accordion>
+
+  <Accordion icon="paintbrush" title="Match your design system">
+    Update default values to match your design system's recommendations.
+  </Accordion>
+</AccordionGroup>
+
+## Real-World Examples
+
+<Tabs>
+  <Tab title="Button">
+    ```tsx
+    // Component
+    interface ButtonProps {
+      size?: 'sm' | 'md' | 'lg'
+      variant?: 'solid' | 'outline' | 'ghost'
+      colorScheme?: 'blue' | 'red' | 'green'
+      children: React.ReactNode
+    }
+
+    // Generated 5 stories:
+    // - Default
+    // - Sizes (3 buttons)
+    // - Variants (3 buttons)
+    // - ColorSchemes (3 buttons)
+    // - AllCombinations (27 buttons in grid)
+    ```
+  </Tab>
+
+  <Tab title="Card">
+    ```tsx
+    // Component
+    interface CardProps {
+      variant?: 'elevated' | 'outlined' | 'filled'
+      size?: 'sm' | 'md' | 'lg'
+    }
+
+    // Generated 4 stories:
+    // - Default
+    // - Sizes (3 cards)
+    // - Variants (3 cards)
+    // - AllCombinations (9 cards)
+    ```
+  </Tab>
+
+  <Tab title="Badge">
+    ```tsx
+    // Component
+    interface BadgeProps {
+      colorScheme?: 'gray' | 'red' | 'yellow' | 'green' | 'blue'
+      variant?: 'solid' | 'subtle' | 'outline'
+    }
+
+    // Generated 4 stories:
+    // - Default
+    // - Variants (3 badges)
+    // - ColorSchemes (5 badges)
+    // - AllCombinations (15 badges in grid)
+    ```
+  </Tab>
+</Tabs>
+
+## Related Templates
+
+Enhance with additional features:
+
+<CardGroup cols={2}>
+  <Card title="interactive" icon="hand-pointer" href="/templates/interactive">
+    Add click and keyboard tests
+  </Card>
+  <Card title="with-msw" icon="server" href="/templates/with-msw">
+    Add API mocking for data states
+  </Card>
+  <Card title="basic" icon="file" href="/templates/basic">
+    Simpler alternative for minimal components
+  </Card>
+</CardGroup>

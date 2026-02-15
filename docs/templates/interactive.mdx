@@ -1,0 +1,585 @@
+---
+title: 'interactive Template'
+description: 'Play function tests for user interactions'
+---
+
+## Overview
+
+The `interactive` template generates stories with play functions that automatically test user interactions like clicks, keyboard navigation, and focus management.
+
+**Use this when:**
+- Component has `onClick`, `onPress`, or other event handlers
+- Need to test user interaction flows
+- Want automated interaction testing in Storybook
+- Building interactive UI components (buttons, menus, modals)
+
+## Requirements
+
+```bash
+npm install --save-dev @storybook/test
+```
+
+Add interactions addon to `.storybook/main.ts`:
+
+```typescript
+export default {
+  addons: [
+    '@storybook/addon-essentials',
+    '@storybook/addon-interactions',
+  ],
+}
+```
+
+## Generated Output
+
+```tsx Example
+import type { Meta, StoryObj } from '@storybook/react'
+import { expect, userEvent, within } from '@storybook/test'
+import { Button } from './Button'
+
+const meta: Meta<typeof Button> = {
+  title: 'Components/Button',
+  component: Button,
+  tags: ['autodocs'],
+}
+
+export default meta
+type Story = StoryObj<typeof Button>
+
+export const Default: Story = {
+  args: {
+    children: 'Click me',
+  },
+}
+
+export const ClickInteraction: Story = {
+  args: {
+    children: 'Click me',
+    onClick: () => console.log('Clicked!'),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+
+    // Find the button
+    const button = canvas.getByRole('button', { name: /click me/i })
+
+    // Verify it's rendered
+    await expect(button).toBeInTheDocument()
+
+    // Click it
+    await userEvent.click(button)
+
+    // Verify onClick was called
+    await expect(args.onClick).toHaveBeenCalled()
+  },
+}
+
+export const KeyboardNavigation: Story = {
+  args: {
+    children: 'Press me',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const button = canvas.getByRole('button')
+
+    // Tab to focus
+    await userEvent.tab()
+    await expect(button).toHaveFocus()
+
+    // Press Enter
+    await userEvent.keyboard('{Enter}')
+
+    // Press Space
+    await userEvent.keyboard(' ')
+  },
+}
+
+export const DisabledState: Story = {
+  args: {
+    children: 'Disabled',
+    disabled: true,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const button = canvas.getByRole('button')
+
+    // Verify it's disabled
+    await expect(button).toBeDisabled()
+
+    // Click should not work
+    await userEvent.click(button)
+    // onClick not called (verified by absence of error)
+  },
+}
+
+export const HoverState: Story = {
+  args: {
+    children: 'Hover me',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const button = canvas.getByRole('button')
+
+    // Hover
+    await userEvent.hover(button)
+
+    // Unhover
+    await userEvent.unhover(button)
+  },
+}
+```
+
+## What's Included
+
+<Check>Click interaction tests</Check>
+<Check>Keyboard navigation (Tab, Enter, Space)</Check>
+<Check>Focus management</Check>
+<Check>Disabled state verification</Check>
+<Check>Hover state testing</Check>
+<Check>Assertion helpers</Check>
+<Check>Automatic spy functions for event handlers</Check>
+
+## Event Handler Detection
+
+The template detects event handlers and generates appropriate tests:
+
+<Tabs>
+  <Tab title="onClick">
+    ```tsx Component
+    interface ButtonProps {
+      onClick?: () => void
+    }
+    ```
+
+    Generated test:
+    ```tsx
+    export const ClickTest: Story = {
+      args: {
+        onClick: fn(), // Spy function
+      },
+      play: async ({ canvasElement, args }) => {
+        const button = within(canvasElement).getByRole('button')
+        await userEvent.click(button)
+        await expect(args.onClick).toHaveBeenCalledTimes(1)
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="onChange">
+    ```tsx Component
+    interface InputProps {
+      onChange?: (value: string) => void
+    }
+    ```
+
+    Generated test:
+    ```tsx
+    export const TypeTest: Story = {
+      args: {
+        onChange: fn(),
+      },
+      play: async ({ canvasElement, args }) => {
+        const input = within(canvasElement).getByRole('textbox')
+        await userEvent.type(input, 'Hello World')
+        await expect(args.onChange).toHaveBeenCalled()
+        await expect(input).toHaveValue('Hello World')
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="onSubmit">
+    ```tsx Component
+    interface FormProps {
+      onSubmit?: (data: FormData) => void
+    }
+    ```
+
+    Generated test:
+    ```tsx
+    export const SubmitTest: Story = {
+      args: {
+        onSubmit: fn(),
+      },
+      play: async ({ canvasElement, args }) => {
+        const canvas = within(canvasElement)
+
+        // Fill form
+        const input = canvas.getByRole('textbox')
+        await userEvent.type(input, 'test@example.com')
+
+        // Submit
+        const button = canvas.getByRole('button', { name: /submit/i })
+        await userEvent.click(button)
+
+        // Verify
+        await expect(args.onSubmit).toHaveBeenCalled()
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="onKeyDown">
+    ```tsx Component
+    interface SearchProps {
+      onKeyDown?: (e: KeyboardEvent) => void
+    }
+    ```
+
+    Generated test:
+    ```tsx
+    export const KeyPressTest: Story = {
+      args: {
+        onKeyDown: fn(),
+      },
+      play: async ({ canvasElement, args }) => {
+        const input = within(canvasElement).getByRole('textbox')
+
+        // Type and press Enter
+        await userEvent.type(input, 'search{Enter}')
+
+        // Verify Enter key triggered handler
+        await expect(args.onKeyDown).toHaveBeenCalledWith(
+          expect.objectContaining({ key: 'Enter' })
+        )
+      },
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Advanced Interactions
+
+<Tabs>
+  <Tab title="Multi-Step Flow">
+    ```tsx
+    export const MultiStepFlow: Story = {
+      play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement)
+
+        // Step 1: Open modal
+        const openButton = canvas.getByText(/open/i)
+        await userEvent.click(openButton)
+
+        // Step 2: Fill form
+        const input = canvas.getByRole('textbox')
+        await userEvent.type(input, 'test@example.com')
+
+        // Step 3: Submit
+        const submitButton = canvas.getByRole('button', { name: /submit/i })
+        await userEvent.click(submitButton)
+
+        // Step 4: Verify success message
+        await expect(canvas.getByText(/success/i)).toBeInTheDocument()
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="Async Operations">
+    ```tsx
+    export const AsyncOperation: Story = {
+      args: {
+        onClick: async () => {
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          return 'Done'
+        },
+      },
+      play: async ({ canvasElement, args }) => {
+        const button = within(canvasElement).getByRole('button')
+
+        // Click triggers async operation
+        await userEvent.click(button)
+
+        // Wait for loading state
+        await expect(button).toHaveTextContent(/loading/i)
+
+        // Wait for completion
+        await waitFor(() => {
+          expect(button).not.toHaveTextContent(/loading/i)
+        })
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="Drag and Drop">
+    ```tsx
+    export const DragAndDrop: Story = {
+      play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement)
+
+        const draggable = canvas.getByTestId('draggable')
+        const dropzone = canvas.getByTestId('dropzone')
+
+        // Drag element
+        await userEvent.pointer([
+          { target: draggable, keys: '[MouseLeft>]' },
+          { coords: { x: 100, y: 100 } },
+          { target: dropzone, keys: '[/MouseLeft]' },
+        ])
+
+        // Verify drop
+        await expect(dropzone).toContainElement(draggable)
+      },
+    }
+    ```
+  </Tab>
+
+  <Tab title="Conditional Rendering">
+    ```tsx
+    export const ConditionalContent: Story = {
+      play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement)
+
+        // Initially hidden
+        expect(canvas.queryByText(/details/i)).not.toBeInTheDocument()
+
+        // Click to show
+        const button = canvas.getByText(/show more/i)
+        await userEvent.click(button)
+
+        // Now visible
+        await expect(canvas.getByText(/details/i)).toBeInTheDocument()
+
+        // Click to hide
+        await userEvent.click(button)
+
+        // Hidden again
+        await waitFor(() => {
+          expect(canvas.queryByText(/details/i)).not.toBeInTheDocument()
+        })
+      },
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Accessibility Testing
+
+Include accessibility checks in interactions:
+
+```tsx
+import { expect, userEvent, within } from '@storybook/test'
+import { axe, toHaveNoViolations } from 'jest-axe'
+
+expect.extend(toHaveNoViolations)
+
+export const AccessibilityTest: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+
+    // Run axe accessibility tests
+    const results = await axe(canvasElement)
+    expect(results).toHaveNoViolations()
+
+    // Test keyboard navigation
+    await userEvent.tab()
+    const button = canvas.getByRole('button')
+    await expect(button).toHaveFocus()
+
+    // Test ARIA labels
+    await expect(button).toHaveAccessibleName()
+    await expect(button).toHaveAccessibleDescription()
+  },
+}
+```
+
+## Usage
+
+<CodeGroup>
+```json MCP Tool
+{
+  "componentPath": "src/components/Button.tsx",
+  "template": "interactive",
+  "includeInteractive": true
+}
+```
+
+```bash CLI
+npx storybook-mcp sync src/components/Button.tsx --template interactive
+```
+</CodeGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion icon="robot" title="Use semantic queries">
+    Prefer role-based queries over test IDs:
+
+    ```tsx
+    // ✅ Good - semantic
+    canvas.getByRole('button', { name: /submit/i })
+
+    // ❌ Bad - fragile
+    canvas.getByTestId('submit-btn')
+    ```
+  </Accordion>
+
+  <Accordion icon="clock" title="Add wait conditions">
+    For async operations, use waitFor:
+
+    ```tsx
+    // ✅ Good - waits for condition
+    await waitFor(() => {
+      expect(canvas.getByText(/success/i)).toBeInTheDocument()
+    })
+
+    // ❌ Bad - may fail if async
+    expect(canvas.getByText(/success/i)).toBeInTheDocument()
+    ```
+  </Accordion>
+
+  <Accordion icon="shield-check" title="Test error states">
+    Include error scenarios:
+
+    ```tsx
+    export const ErrorState: Story = {
+      args: {
+        onClick: () => {
+          throw new Error('Something went wrong')
+        },
+      },
+      play: async ({ canvasElement }) => {
+        const button = within(canvasElement).getByRole('button')
+        await userEvent.click(button)
+
+        // Verify error message appears
+        await expect(
+          within(canvasElement).getByText(/error/i)
+        ).toBeInTheDocument()
+      },
+    }
+    ```
+  </Accordion>
+
+  <Accordion icon="play" title="Keep tests focused">
+    One test per story:
+
+    ```tsx
+    // ✅ Good - focused test
+    export const ClickTest: Story = { /* tests clicking */ }
+    export const KeyboardTest: Story = { /* tests keyboard */ }
+
+    // ❌ Bad - doing too much
+    export const AllTests: Story = {
+      play: async () => {
+        // tests clicking, keyboard, hover, focus...
+      }
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Debugging Interactions
+
+View interaction panel in Storybook:
+
+1. Run Storybook
+2. Select story with play function
+3. Open "Interactions" panel (bottom tabs)
+4. See step-by-step execution
+5. Click steps to see state at that point
+
+For debugging in code:
+
+```tsx
+export const DebugTest: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+
+    // Pause for inspection
+    await new Promise(resolve => setTimeout(resolve, 2000))
+
+    // Log element state
+    const button = canvas.getByRole('button')
+    console.log('Button:', button)
+    console.log('Text:', button.textContent)
+    console.log('Disabled:', button.disabled)
+
+    // Continue test...
+  },
+}
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion icon="circle-exclamation" title="Element not found">
+    **Error:** "Unable to find an element by role"
+
+    **Solutions:**
+
+    1. Check the element is rendered:
+       ```tsx
+       const button = canvas.queryByRole('button')
+       console.log('Found:', button)
+       ```
+
+    2. Use correct role:
+       ```tsx
+       // Buttons
+       getByRole('button')
+
+       // Links
+       getByRole('link')
+
+       // Inputs
+       getByRole('textbox') // text inputs
+       getByRole('checkbox')
+       getByRole('radio')
+       ```
+
+    3. Wait for async rendering:
+       ```tsx
+       await waitFor(() => {
+         expect(canvas.getByRole('button')).toBeInTheDocument()
+       })
+       ```
+  </Accordion>
+
+  <Accordion icon="circle-exclamation" title="onClick not called">
+    **Solution:**
+
+    Ensure you're using `fn()` from @storybook/test:
+
+    ```tsx
+    import { fn } from '@storybook/test'
+
+    export const ClickTest: Story = {
+      args: {
+        onClick: fn(), // ← Spy function
+      },
+      play: async ({ args }) => {
+        await expect(args.onClick).toHaveBeenCalled()
+      },
+    }
+    ```
+  </Accordion>
+
+  <Accordion icon="circle-exclamation" title="Play function not running">
+    **Solutions:**
+
+    1. Check interactions addon is installed and enabled
+    2. Verify no errors in console
+    3. Check story is selected (play runs on story render)
+    4. Try reloading Storybook
+  </Accordion>
+</AccordionGroup>
+
+## Related Templates
+
+Combine with other features:
+
+<CardGroup cols={2}>
+  <Card title="with-msw" icon="server" href="/templates/with-msw">
+    Test interactions that trigger API calls
+  </Card>
+  <Card title="form" icon="rectangle-list" href="/templates/form">
+    Test form submission flows
+  </Card>
+  <Card title="with-router" icon="route" href="/templates/with-router">
+    Test navigation interactions
+  </Card>
+</CardGroup>
