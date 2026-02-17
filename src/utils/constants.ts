@@ -8,7 +8,7 @@
 // ===========================================
 export const POLAR_UPGRADE_URL = 'https://polar.sh/forgekit'
 export const FORGEKIT_EMAIL = 'forgekit@pm.me'
-export const FREE_TIER_MAX_SYNC = 5
+export const FREE_TIER_MAX_SYNC = 10
 export const LICENSE_CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
 
 // ===========================================

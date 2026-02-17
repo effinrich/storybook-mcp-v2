@@ -100,8 +100,8 @@ CONFIGURATION:
   Or set STORYBOOK_MCP_LICENSE environment variable.
 
 LICENSE:
-  Free tier: 5 components, basic stories only
-  Pro ($49): Unlimited components, tests, docs, all templates
+  Free tier: 10 components, basic stories only
+  Pro ($29 launch price): Unlimited components, tests, docs, all templates
   
   Get Pro: ${POLAR_UPGRADE_URL}
 

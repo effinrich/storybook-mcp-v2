@@ -347,7 +347,7 @@ export async function syncAll(
     return {
       ...result,
       summary: `Free Tier Limit: Synced first ${license.maxSyncLimit} of ${result.scanned} components. Upgrade to Pro for unlimited sync.`,
-      warning: 'Sync limit reached (5 components max for Free Tier)'
+      warning: `Sync limit reached (${license.maxSyncLimit} components max for Free Tier)`
     }
   }
 

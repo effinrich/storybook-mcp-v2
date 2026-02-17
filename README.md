@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**⚡ Pro License — $49 lifetime** | Unlimited sync • All templates • Test & docs generation
+**⚡ Pro License — ~~$49~~ $29 launch price** | Unlimited sync • All templates • Test & docs generation
 
 [**Get Pro →**](https://buy.polar.sh/polar_cl_Tnd3ryKUJpYPnXF0kBW1KFHQnoLlxAq2cz9GL3Et0dV) · [npm](https://npmjs.com/package/forgekit-storybook-mcp) · [GitHub](https://github.com/effinrich/storybook-mcp-v2)
 
@@ -23,12 +23,12 @@ Perfect for individuals and trying out the tool.
 
 - ✅ List and analyze components
 - ✅ Generate basic stories (`basic` template)
-- ✅ Sync up to 5 components per run
+- ✅ Sync up to 10 components per run
 - ❌ Advanced templates (`with-msw`, `form`, etc.)
 - ❌ Test generation (`generate_test`)
 - ❌ Docs generation (`generate_docs`)
 
-### Pro Tier — $49 (Lifetime License)
+### Pro Tier — ~~$49~~ $29 (Launch Price · Lifetime License)
 
 For professional teams requiring complete coverage.
 
