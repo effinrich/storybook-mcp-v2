@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.10.6] - 2026-02-16
+
+### Changed
+
+- **Pricing: $49 → $29 launch price** — reduced Pro tier price to improve conversion
+- **Free tier limit: 5 → 10 components** — doubled free tier allowance to give users more value before upgrading
+- Free tier warning message now uses dynamic limit from constants (future-proof)
+
 ## [0.10.5] - 2026-02-16
 
 ### Added
