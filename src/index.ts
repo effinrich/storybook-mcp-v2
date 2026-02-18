@@ -21,6 +21,7 @@ import {
   listComponents,
   analyzeComponentTool,
   generateStoryTool,
+  updateStoryTool,
   validateStoryTool,
   getStoryTemplate,
   listTemplates,
@@ -128,6 +129,45 @@ export function createStorybookMCPServer(config: StorybookMCPConfig) {
             dryRun: {
               type: 'boolean',
               description: 'Generate but do not write to disk (default: false)',
+            },
+          },
+          required: ['componentPath'],
+        },
+      },
+      {
+        name: 'update_story',
+        description: 'Update an existing Storybook story — regenerates template sections while preserving user-added stories. Pro tier only.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            componentPath: {
+              type: 'string',
+              description: 'Path to the component file relative to project root',
+            },
+            includeVariants: {
+              type: 'boolean',
+              description: 'Include variant stories (default: true)',
+            },
+            includeInteractive: {
+              type: 'boolean',
+              description: 'Include interactive story with play function (default: true)',
+            },
+            includeA11y: {
+              type: 'boolean',
+              description: 'Include accessibility story (default: false)',
+            },
+            includeResponsive: {
+              type: 'boolean',
+              description: 'Include responsive viewport stories (default: false)',
+            },
+            template: {
+              type: 'string',
+              enum: ['basic', 'with-controls', 'with-variants', 'with-msw', 'with-router', 'page', 'interactive', 'form'],
+              description: 'Template to use for regeneration',
+            },
+            dryRun: {
+              type: 'boolean',
+              description: 'Preview merge result without writing to disk (default: false)',
             },
           },
           required: ['componentPath'],
@@ -340,6 +380,10 @@ export function createStorybookMCPServer(config: StorybookMCPConfig) {
 
         case 'generate_story':
           result = await generateStoryTool(config, args as any)
+          break
+
+        case 'update_story':
+          result = await updateStoryTool(config, args as any)
           break
 
         case 'validate_story':

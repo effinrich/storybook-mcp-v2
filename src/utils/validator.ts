@@ -11,6 +11,63 @@ import type {
   ValidationIssue,
 } from '../types.js'
 
+// ===========================================
+// Pre-write Import Validation
+// ===========================================
+
+/**
+ * Validate a freshly generated story's imports before writing to disk.
+ * All issues are non-blocking warnings — generation still proceeds.
+ */
+export function validateGeneratedStory(
+  config: StorybookMCPConfig,
+  storyContent: string,
+  componentPath: string
+): { valid: boolean; warnings: string[] } {
+  const warnings: string[] = []
+  const rootDir = config.rootDir
+
+  // 1. Check for unclosed template placeholders
+  if (/\{\{[A-Z_]+\}\}/.test(storyContent)) {
+    warnings.push('Generated story contains unreplaced template placeholders ({{...}})')
+  }
+
+  // 2. Resolve component imports — check each relative import path
+  const storyDir = path.dirname(path.join(rootDir, componentPath))
+  const componentImportRe = /import\s+\{[^}]+\}\s+from\s+['"](\.[^'"]+)['"]/g
+  const relativeImports = Array.from(storyContent.matchAll(componentImportRe), r => r[1])
+  for (const importPath of relativeImports) {
+    const resolved = path.resolve(storyDir, importPath)
+    const extensions = ['.tsx', '.ts', '.jsx', '.js', '']
+    const exists = extensions.some(ext => fs.existsSync(resolved + ext))
+    if (!exists) {
+      warnings.push(`Import '${importPath}' could not be resolved relative to story directory`)
+    }
+  }
+
+  // 3. Check @storybook/react is installed
+  if (!fs.existsSync(path.join(rootDir, 'node_modules/@storybook/react'))) {
+    warnings.push("'@storybook/react' not found in node_modules — Storybook may not be installed")
+  }
+
+  // 4. Decorator / addon package checks (non-fatal)
+  const decoratorChecks: Array<[string, string]> = [
+    ['withRouter', 'storybook-addon-remix-react-router'],
+    ['msw', 'msw-storybook-addon'],
+    ['userEvent', '@storybook/test'],
+  ]
+  for (const [token, pkg] of decoratorChecks) {
+    if (
+      storyContent.includes(token) &&
+      !fs.existsSync(path.join(rootDir, 'node_modules', pkg))
+    ) {
+      warnings.push(`Story uses '${token}' but '${pkg}' was not found in node_modules`)
+    }
+  }
+
+  return { valid: warnings.length === 0, warnings }
+}
+
 /**
  * Validate a story file
  */

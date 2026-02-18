@@ -3,10 +3,12 @@
  * Tool implementations for the MCP server
  */
 
+import fs from 'node:fs'
+import path from 'node:path'
 import type { StorybookMCPConfig, StoryGenerationOptions } from './types.js'
 import { scanComponents, analyzeComponent } from './utils/scanner.js'
 import { generateStory, writeStoryFile } from './utils/generator.js'
-import { validateStory } from './utils/validator.js'
+import { validateStory, validateGeneratedStory } from './utils/validator.js'
 import { getTemplate, getTemplates } from './utils/templates.js'
 import { generateTest, writeTestFile } from './utils/test-generator.js'
 import { generateDocs, writeDocsFile } from './utils/docs-generator.js'
@@ -16,6 +18,8 @@ import {
 } from './utils/initializer.js'
 import { validateLicense, requireFeature } from './utils/license.js'
 import { runPreflight } from './utils/preflight.js'
+import { mergeStories, parseStoryExports } from './utils/story-merger.js'
+import { recordStoryVersion, hashContent } from './utils/story-history.js'
 
 /**
  * Tool: list_components
@@ -110,16 +114,30 @@ export async function generateStoryTool(
   // Generate the story
   const story = await generateStory(config, analysis, storyOptions)
 
+  // Pre-write import validation (non-blocking)
+  const importValidation = validateGeneratedStory(config, story.content, args.componentPath)
+
   // Write to disk unless dry run
   let written = false
   if (!args.dryRun) {
     written = await writeStoryFile(config, story, args.overwrite)
+    if (written) {
+      const storyFullPath = path.join(config.rootDir, story.filePath)
+      recordStoryVersion(config.rootDir, {
+        storyPath: story.filePath,
+        componentPath: args.componentPath,
+        generatedAt: new Date().toISOString(),
+        storyHash: hashContent(fs.existsSync(storyFullPath) ? fs.readFileSync(storyFullPath, 'utf-8') : story.content),
+        action: 'created',
+      })
+    }
   }
 
   return {
     story,
     written,
     path: story.filePath,
+    validation: importValidation,
     summary: args.dryRun
       ? `Generated story for ${analysis.name} (dry run - not written)`
       : written
@@ -473,5 +491,101 @@ export async function generateDocsTool(
       : written
         ? `Created docs at ${docs.filePath}`
         : `Docs already exist at ${docs.filePath}`
+  }
+}
+
+/**
+ * Tool: update_story
+ * Update an existing story — regenerates template sections while preserving user-added exports.
+ * Pro tier only.
+ */
+export async function updateStoryTool(
+  config: StorybookMCPConfig,
+  args: {
+    componentPath: string
+    includeVariants?: boolean
+    includeInteractive?: boolean
+    includeA11y?: boolean
+    includeResponsive?: boolean
+    template?: string
+    dryRun?: boolean
+  }
+) {
+  // Pro only
+  const license = validateLicense(config)
+  requireFeature('advanced_templates', license)
+
+  // Analyze component
+  const analysis = await analyzeComponent(config, args.componentPath)
+
+  // Build generation options
+  const storyOptions: StoryGenerationOptions = {
+    componentPath: args.componentPath,
+    includeVariants: args.includeVariants ?? true,
+    includeInteractive: args.includeInteractive ?? true,
+    includeA11y: args.includeA11y ?? false,
+    includeResponsive: args.includeResponsive ?? false,
+    overwrite: true,
+  }
+  if (args.template) {
+    storyOptions.template = args.template as StoryGenerationOptions['template']
+  }
+
+  // Generate fresh story
+  const story = await generateStory(config, analysis, storyOptions)
+
+  // Check if an existing story is on disk
+  const storyFullPath = path.join(config.rootDir, story.filePath)
+  const existingContent = fs.existsSync(storyFullPath)
+    ? fs.readFileSync(storyFullPath, 'utf-8')
+    : null
+
+  // Merge: preserve user-added stories from existing file
+  let finalContent = story.content
+  let preserved: string[] = []
+  let removed: string[] = []
+
+  if (existingContent) {
+    const generatedExports = parseStoryExports(story.content)
+    const merged = mergeStories(story.content, existingContent, generatedExports)
+    finalContent = merged.content
+    preserved = merged.preserved
+    removed = merged.removed
+  }
+
+  // Pre-write import validation (non-blocking)
+  const importValidation = validateGeneratedStory(config, finalContent, args.componentPath)
+
+  // Write merged content
+  let written = false
+  if (!args.dryRun) {
+    const dir = path.dirname(storyFullPath)
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true })
+    }
+    fs.writeFileSync(storyFullPath, finalContent, 'utf-8')
+    written = true
+
+    recordStoryVersion(config.rootDir, {
+      storyPath: story.filePath,
+      componentPath: args.componentPath,
+      generatedAt: new Date().toISOString(),
+      storyHash: hashContent(finalContent),
+      action: existingContent ? 'merged' : 'created',
+    })
+  }
+
+  return {
+    story: { ...story, content: finalContent },
+    preserved,
+    removed,
+    written,
+    path: story.filePath,
+    validation: importValidation,
+    summary: args.dryRun
+      ? `Updated story for ${analysis.name} (dry run — not written)${preserved.length > 0 ? `, would preserve: ${preserved.join(', ')}` : ''}`
+      : written
+        ? `Updated story at ${story.filePath}${preserved.length > 0 ? `. Preserved user stories: ${preserved.join(', ')}` : ''}`
+        : `Failed to write story at ${story.filePath}`,
   }
 }

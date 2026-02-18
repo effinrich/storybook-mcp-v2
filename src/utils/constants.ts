@@ -79,6 +79,12 @@ export const CACHE = {
 } as const
 
 // ===========================================
+// ForgeKit Output Directory
+// ===========================================
+export const FORGEKIT_DIR = '.forgekit'
+export const STORY_HISTORY_FILENAME = 'story-history.json'
+
+// ===========================================
 // File Thresholds
 // ===========================================
 export const THRESHOLDS = {
