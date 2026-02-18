@@ -27,22 +27,62 @@ export async function generateStory(
   // Template-driven defaults: each template implies a sensible combination of options.
   // Explicit options always override these template defaults.
   const templateDefaults: Record<string, Partial<typeof options>> = {
-    'basic':         { includeVariants: false, includeInteractive: false, includeA11y: false, includeResponsive: false },
-    'with-controls': { includeVariants: false, includeInteractive: false, includeA11y: false, includeResponsive: false },
-    'with-variants': { includeVariants: true,  includeInteractive: false, includeA11y: false, includeResponsive: false },
-    'with-msw':      { includeVariants: false, includeInteractive: true,  includeA11y: false, includeResponsive: false },
-    'with-router':   { includeVariants: false, includeInteractive: false, includeA11y: false, includeResponsive: false },
-    'page':          { includeVariants: false, includeInteractive: false, includeA11y: false, includeResponsive: true  },
-    'interactive':   { includeVariants: false, includeInteractive: true,  includeA11y: false, includeResponsive: false },
-    'form':          { includeVariants: false, includeInteractive: true,  includeA11y: true,  includeResponsive: false },
+    basic: {
+      includeVariants: false,
+      includeInteractive: false,
+      includeA11y: false,
+      includeResponsive: false
+    },
+    'with-controls': {
+      includeVariants: false,
+      includeInteractive: false,
+      includeA11y: false,
+      includeResponsive: false
+    },
+    'with-variants': {
+      includeVariants: true,
+      includeInteractive: false,
+      includeA11y: false,
+      includeResponsive: false
+    },
+    'with-msw': {
+      includeVariants: false,
+      includeInteractive: true,
+      includeA11y: false,
+      includeResponsive: false
+    },
+    'with-router': {
+      includeVariants: false,
+      includeInteractive: false,
+      includeA11y: false,
+      includeResponsive: false
+    },
+    page: {
+      includeVariants: false,
+      includeInteractive: false,
+      includeA11y: false,
+      includeResponsive: true
+    },
+    interactive: {
+      includeVariants: false,
+      includeInteractive: true,
+      includeA11y: false,
+      includeResponsive: false
+    },
+    form: {
+      includeVariants: false,
+      includeInteractive: true,
+      includeA11y: true,
+      includeResponsive: false
+    }
   }
   const td = templateDefaults[template] ?? templateDefaults.basic
 
   const {
-    includeVariants   = td.includeVariants   ?? true,
+    includeVariants = td.includeVariants ?? true,
     includeInteractive = td.includeInteractive ?? true,
-    includeA11y        = td.includeA11y        ?? false,
-    includeResponsive  = td.includeResponsive  ?? false,
+    includeA11y = td.includeA11y ?? false,
+    includeResponsive = td.includeResponsive ?? false
   } = options
 
   const library = config.libraries.find(l => l.name === analysis.library)
@@ -56,7 +96,7 @@ export async function generateStory(
   let content = ''
 
   // Build meta
-  content += imports.join('\n') + '\n\n'
+  content += `${imports.join('\n')}\n\n`
   content += buildMeta(analysis, storyTitle, decorators, argTypes, defaultArgs)
   content += '\n\n'
   content += `type Story = StoryObj<typeof ${analysis.name}>\n\n`
@@ -68,7 +108,7 @@ export async function generateStory(
   if (includeVariants) {
     const variantStories = buildVariantStories(analysis)
     if (variantStories) {
-      content += '\n' + variantStories
+      content += `\n${variantStories}`
       stories.push('Sizes', 'Variants')
     }
   }
@@ -79,7 +119,7 @@ export async function generateStory(
     config.framework !== 'react-native' &&
     !analysis.dependencies.usesReactNative
   ) {
-    content += '\n' + buildInteractiveStory(analysis)
+    content += `\n${buildInteractiveStory(analysis)}`
     stories.push('Interactive')
   }
 
@@ -89,13 +129,13 @@ export async function generateStory(
     config.framework !== 'react-native' &&
     !analysis.dependencies.usesReactNative
   ) {
-    content += '\n' + buildA11yStory(analysis)
+    content += `\n${buildA11yStory(analysis)}`
     stories.push('Accessibility')
   }
 
   // Responsive stories
   if (includeResponsive) {
-    content += '\n' + buildResponsiveStories(analysis)
+    content += `\n${buildResponsiveStories(analysis)}`
     stories.push('Mobile', 'Desktop')
   }
 
@@ -177,7 +217,6 @@ function buildImports(
   }
 
   // Add component import
-  const componentDir = path.dirname(analysis.filePath)
   const componentFile = path.basename(
     analysis.filePath,
     path.extname(analysis.filePath)
@@ -311,21 +350,53 @@ function buildDefaultArgs(props: PropDefinition[]): Record<string, unknown> {
     } else if (prop.type === 'number' && !prop.required) {
       // Optional numbers: use semantic defaults based on prop name
       const n = prop.name.toLowerCase()
-      if (n.includes('count') || n.includes('index') || n.includes('step') || n.includes('min') || n.includes('max')) {
+      if (
+        n.includes('count') ||
+        n.includes('index') ||
+        n.includes('step') ||
+        n.includes('min') ||
+        n.includes('max')
+      ) {
         args[prop.name] = 1
-      } else if (n.includes('lines') || n.includes('rows') || n.includes('cols') || n.includes('columns')) {
+      } else if (
+        n.includes('lines') ||
+        n.includes('rows') ||
+        n.includes('cols') ||
+        n.includes('columns')
+      ) {
         args[prop.name] = 3
-      } else if (n === 'size' || n.endsWith('size') || n.includes('width') || n.includes('height')) {
+      } else if (
+        n === 'size' ||
+        n.endsWith('size') ||
+        n.includes('width') ||
+        n.includes('height')
+      ) {
         args[prop.name] = 24
       } else if (n.includes('radius') || n.includes('rounded')) {
         args[prop.name] = 8
-      } else if (n.includes('padding') || n.includes('margin') || n.includes('gap') || n.includes('spacing') || n.includes('offset')) {
+      } else if (
+        n.includes('padding') ||
+        n.includes('margin') ||
+        n.includes('gap') ||
+        n.includes('spacing') ||
+        n.includes('offset')
+      ) {
         args[prop.name] = 8
       } else if (n.includes('opacity') || n.includes('alpha')) {
         args[prop.name] = 1
-      } else if (n.includes('duration') || n.includes('delay') || n.includes('timeout') || n.includes('interval')) {
+      } else if (
+        n.includes('duration') ||
+        n.includes('delay') ||
+        n.includes('timeout') ||
+        n.includes('interval')
+      ) {
         args[prop.name] = 300
-      } else if (n.includes('scale') || n.includes('zoom') || n.includes('ratio') || n.includes('factor')) {
+      } else if (
+        n.includes('scale') ||
+        n.includes('zoom') ||
+        n.includes('ratio') ||
+        n.includes('factor')
+      ) {
         args[prop.name] = 1
       } else {
         args[prop.name] = 0
@@ -388,15 +459,32 @@ function buildDefaultStory(
 }
 
 /** Prop names treated as "size" variants — rendered in a flex row with center alignment */
-const SIZE_PROP_NAMES = ['size', 'sz', 'iconSize', 'avatarSize', 'thumbnailSize']
+const SIZE_PROP_NAMES = [
+  'size',
+  'sz',
+  'iconSize',
+  'avatarSize',
+  'thumbnailSize'
+]
 
 /**
  * Prop names that imply visual variation (style, state, appearance).
  * Any prop whose name matches one of these (or ends with 'Variant') will get a Variants story.
  */
 const VARIANT_PROP_NAMES = [
-  'variant', 'colorScheme', 'color', 'type', 'kind', 'intent',
-  'appearance', 'shape', 'mode', 'status', 'severity', 'tone', 'level',
+  'variant',
+  'colorScheme',
+  'color',
+  'type',
+  'kind',
+  'intent',
+  'appearance',
+  'shape',
+  'mode',
+  'status',
+  'severity',
+  'tone',
+  'level'
 ]
 
 /**
@@ -404,7 +492,9 @@ const VARIANT_PROP_NAMES = [
  * Handles any prop with enum-like options — not just the three hardcoded names.
  */
 function buildVariantStories(analysis: ComponentAnalysis): string | null {
-  const propsWithOptions = analysis.props.filter(p => p.controlOptions && p.controlOptions.length > 1)
+  const propsWithOptions = analysis.props.filter(
+    p => p.controlOptions && p.controlOptions.length > 1
+  )
 
   const sizeProp = propsWithOptions.find(p => SIZE_PROP_NAMES.includes(p.name))
   const variantProp = propsWithOptions.find(
@@ -586,7 +676,7 @@ function buildA11yStory(analysis: ComponentAnalysis): string {
 /**
  * Build responsive stories
  */
-function buildResponsiveStories(analysis: ComponentAnalysis): string {
+function buildResponsiveStories(_analysis: ComponentAnalysis): string {
   let stories = `/**\n * Mobile viewport\n */\n`
   stories += `export const Mobile: Story = {\n`
   stories += `  parameters: {\n`
