@@ -4,12 +4,21 @@ description: 'Release history for forgekit-storybook-mcp'
 sidebarTitle: 'Changelog'
 ---
 
-## [Unreleased]
+## [0.11.0] — 2026-02-18
 
-- `update_story` — regenerate stories while preserving user-written exports (Pro)
-- `generate_code_connect` — generate Figma Code Connect `.figma.tsx` files (Pro)
-- Import validation on story generation — non-blocking warnings for unresolvable imports
-- Story version tracking in `.forgekit/story-history.json`
+### Added
+
+- **`update_story`** (Pro) — regenerates a story while preserving any custom exports you have added. Detects user-written `export const X: Story` blocks and appends them below the regenerated content.
+- **`generate_code_connect`** (Pro) — generates a `@figma/code-connect` `.figma.tsx` file from component analysis. Maps TypeScript props to `figma.string`, `figma.boolean`, `figma.enum`, `figma.children`, and `figma.number` bindings automatically.
+- **Story version tracking** — every `generate_story` and `update_story` call logs an entry to `.forgekit/story-history.json` with action, timestamp, and content hash.
+- **Import validation** — non-blocking warnings on generation: checks component import path, `@storybook/react` presence, decorator packages, and template placeholders.
+
+### Docs
+
+- Migrated `mint.json` → `docs.json` (Mintlify deprecated the old format)
+- New API reference pages for `update_story` and `generate_code_connect`
+- New Figma integration guide (Code Connect + Code to Canvas)
+- Changelog page
 
 ---
 
