@@ -22,12 +22,27 @@ export async function generateStory(
   analysis: ComponentAnalysis,
   options: StoryGenerationOptions
 ): Promise<GeneratedStory> {
+  const { template = 'basic' } = options
+
+  // Template-driven defaults: each template implies a sensible combination of options.
+  // Explicit options always override these template defaults.
+  const templateDefaults: Record<string, Partial<typeof options>> = {
+    'basic':         { includeVariants: false, includeInteractive: false, includeA11y: false, includeResponsive: false },
+    'with-controls': { includeVariants: false, includeInteractive: false, includeA11y: false, includeResponsive: false },
+    'with-variants': { includeVariants: true,  includeInteractive: false, includeA11y: false, includeResponsive: false },
+    'with-msw':      { includeVariants: false, includeInteractive: true,  includeA11y: false, includeResponsive: false },
+    'with-router':   { includeVariants: false, includeInteractive: false, includeA11y: false, includeResponsive: false },
+    'page':          { includeVariants: false, includeInteractive: false, includeA11y: false, includeResponsive: true  },
+    'interactive':   { includeVariants: false, includeInteractive: true,  includeA11y: false, includeResponsive: false },
+    'form':          { includeVariants: false, includeInteractive: true,  includeA11y: true,  includeResponsive: false },
+  }
+  const td = templateDefaults[template] ?? templateDefaults.basic
+
   const {
-    includeVariants = true,
-    includeInteractive = true,
-    includeA11y = false,
-    includeResponsive = false,
-    template = 'basic'
+    includeVariants   = td.includeVariants   ?? true,
+    includeInteractive = td.includeInteractive ?? true,
+    includeA11y        = td.includeA11y        ?? false,
+    includeResponsive  = td.includeResponsive  ?? false,
   } = options
 
   const library = config.libraries.find(l => l.name === analysis.library)
@@ -294,12 +309,23 @@ function buildDefaultArgs(props: PropDefinition[]): Record<string, unknown> {
       // Optional booleans default to false
       args[prop.name] = false
     } else if (prop.type === 'number' && !prop.required) {
-      // Optional numbers: use 0 for generic, 1 for count/index props
-      if (
-        prop.name.includes('count') ||
-        prop.name.includes('index') ||
-        prop.name.includes('Index')
-      ) {
+      // Optional numbers: use semantic defaults based on prop name
+      const n = prop.name.toLowerCase()
+      if (n.includes('count') || n.includes('index') || n.includes('step') || n.includes('min') || n.includes('max')) {
+        args[prop.name] = 1
+      } else if (n.includes('lines') || n.includes('rows') || n.includes('cols') || n.includes('columns')) {
+        args[prop.name] = 3
+      } else if (n === 'size' || n.endsWith('size') || n.includes('width') || n.includes('height')) {
+        args[prop.name] = 24
+      } else if (n.includes('radius') || n.includes('rounded')) {
+        args[prop.name] = 8
+      } else if (n.includes('padding') || n.includes('margin') || n.includes('gap') || n.includes('spacing') || n.includes('offset')) {
+        args[prop.name] = 8
+      } else if (n.includes('opacity') || n.includes('alpha')) {
+        args[prop.name] = 1
+      } else if (n.includes('duration') || n.includes('delay') || n.includes('timeout') || n.includes('interval')) {
+        args[prop.name] = 300
+      } else if (n.includes('scale') || n.includes('zoom') || n.includes('ratio') || n.includes('factor')) {
         args[prop.name] = 1
       } else {
         args[prop.name] = 0
@@ -361,15 +387,31 @@ function buildDefaultStory(
   return story
 }
 
+/** Prop names treated as "size" variants — rendered in a flex row with center alignment */
+const SIZE_PROP_NAMES = ['size', 'sz', 'iconSize', 'avatarSize', 'thumbnailSize']
+
+/**
+ * Prop names that imply visual variation (style, state, appearance).
+ * Any prop whose name matches one of these (or ends with 'Variant') will get a Variants story.
+ */
+const VARIANT_PROP_NAMES = [
+  'variant', 'colorScheme', 'color', 'type', 'kind', 'intent',
+  'appearance', 'shape', 'mode', 'status', 'severity', 'tone', 'level',
+]
+
 /**
  * Build variant stories (sizes, variants, etc.)
+ * Handles any prop with enum-like options — not just the three hardcoded names.
  */
 function buildVariantStories(analysis: ComponentAnalysis): string | null {
-  const variantProps = analysis.props.filter(
-    p => ['variant', 'size', 'colorScheme'].includes(p.name) && p.controlOptions
+  const propsWithOptions = analysis.props.filter(p => p.controlOptions && p.controlOptions.length > 1)
+
+  const sizeProp = propsWithOptions.find(p => SIZE_PROP_NAMES.includes(p.name))
+  const variantProp = propsWithOptions.find(
+    p => VARIANT_PROP_NAMES.includes(p.name) || p.name.endsWith('Variant')
   )
 
-  if (variantProps.length === 0) {
+  if (!sizeProp && !variantProp) {
     return null
   }
 
@@ -377,7 +419,6 @@ function buildVariantStories(analysis: ComponentAnalysis): string | null {
   let stories = ''
 
   // Size story
-  const sizeProp = variantProps.find(p => p.name === 'size')
   if (sizeProp?.controlOptions) {
     stories += `/**\n * All size variants\n */\n`
     stories += `export const Sizes: Story = {\n`
@@ -385,9 +426,9 @@ function buildVariantStories(analysis: ComponentAnalysis): string | null {
     stories += `    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>\n`
     for (const size of sizeProp.controlOptions) {
       if (hasChildren) {
-        stories += `      <${analysis.name} size="${size}">${size}</${analysis.name}>\n`
+        stories += `      <${analysis.name} ${sizeProp.name}="${size}">${size}</${analysis.name}>\n`
       } else {
-        stories += `      <${analysis.name} size="${size}" />\n`
+        stories += `      <${analysis.name} ${sizeProp.name}="${size}" />\n`
       }
     }
     stories += `    </div>\n`
@@ -396,17 +437,16 @@ function buildVariantStories(analysis: ComponentAnalysis): string | null {
   }
 
   // Variant story
-  const variantProp = variantProps.find(p => p.name === 'variant')
   if (variantProp?.controlOptions) {
     stories += `/**\n * All style variants\n */\n`
     stories += `export const Variants: Story = {\n`
     stories += `  render: () => (\n`
-    stories += `    <div style={{ display: 'flex', gap: '1rem' }}>\n`
+    stories += `    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>\n`
     for (const variant of variantProp.controlOptions) {
       if (hasChildren) {
-        stories += `      <${analysis.name} variant="${variant}">${variant}</${analysis.name}>\n`
+        stories += `      <${analysis.name} ${variantProp.name}="${variant}">${variant}</${analysis.name}>\n`
       } else {
-        stories += `      <${analysis.name} variant="${variant}" />\n`
+        stories += `      <${analysis.name} ${variantProp.name}="${variant}" />\n`
       }
     }
     stories += `    </div>\n`
