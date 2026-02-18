@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-02-18
+
+### Added
+
+- **`update_story`** (Pro) — regenerates a story while preserving any custom exports you have added. Uses merge logic to detect user-written `export const X: Story` blocks and append them below the regenerated content. Includes import validation and version tracking.
+- **`generate_code_connect`** (Pro) — generates a `@figma/code-connect` `.figma.tsx` file from component analysis. Maps TypeScript props to `figma.string`, `figma.boolean`, `figma.enum`, `figma.children`, and `figma.number` bindings. Event handlers, `className`, `style`, and `ref` are excluded automatically.
+- **Story version tracking** — every `generate_story` and `update_story` call records an entry in `.forgekit/story-history.json` (action, timestamp, content hash). Up to 10 versions retained per story path.
+- **Import validation** — non-blocking warnings on story generation: checks relative component import, `@storybook/react` presence, decorator addon packages, and template placeholders.
+
+### Docs
+
+- Migrated `mint.json` → `docs.json` (Mintlify deprecated the old format)
+- Added API reference pages for `update_story` and `generate_code_connect`
+- Added Figma integration guide (Code Connect + Code to Canvas)
+- Added changelog page
+
 ## [0.10.6] - 2026-02-16
 
 ### Changed
