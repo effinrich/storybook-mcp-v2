@@ -69,18 +69,15 @@ A **Model Context Protocol (MCP) server** for Storybook story generation, compon
 
 ---
 
-## 🎉 What's New in v0.10
+## 🎉 What's New in v0.11
 
-> **We've listened to your feedback!** Here's what's improved:
+- ✅ **`update_story`** — Regenerate a story file while preserving any custom exports you've written. No more choosing between a fresh template and your hand-crafted stories.
+- ✅ **`generate_code_connect`** — Generate Figma Code Connect `.figma.tsx` files from component analysis. Publish with `npx figma connect publish` so designers see your real component code in Figma Dev Mode.
+- ✅ **Story version tracking** — Every `generate_story` / `update_story` call records an entry in `.forgekit/story-history.json` (up to 10 versions per story path).
+- ✅ **Import validation** — Non-blocking warnings when generated stories reference imports that can't be resolved.
+- ✅ **Figma Code to Canvas** — Part of `forgekit-context`: push Storybook story renders into Figma as editable frames (requires Figma desktop app with Dev Mode MCP server enabled).
 
-- ✅ **Storybook 10.2+ support** — Latest version with Vitest addon integration
-- ✅ **Better Windows compatibility** — Fixed PATH issues with npm scripts
-- ✅ **Comprehensive documentation** — 33 pages on [forgekit.cloud](https://forgekit.cloud) covering all features
-- ✅ **Type safety improvements** — Cleaner code, better error messages
-- ✅ **Framework detection fixes** — More reliable auto-detection for Chakra, shadcn, Tamagui
-- ✅ **Improved story generation** — Smarter play functions, better accessibility testing
-
-**Upgrading from 0.8.x?** Check the [CHANGELOG](./CHANGELOG.md) for breaking changes.
+**Upgrading from 0.10.x?** Run `npm install forgekit-storybook-mcp@latest`. No breaking changes. Check the [CHANGELOG](./CHANGELOG.md) for full details.
 
 ---
 
@@ -94,6 +91,7 @@ A **Model Context Protocol (MCP) server** for Storybook story generation, compon
 - [CLI Flags](#cli-flags)
 - [MCP Client Setup](#mcp-client-setup)
 - [Tools Reference](#tools-reference)
+- [Figma Integration](#figma-integration)
 - [Templates](#templates)
 - [Resources](#resources)
 - [Programmatic Usage](#programmatic-usage)
@@ -389,21 +387,23 @@ Add to `claude_desktop_config.json`:
 
 ## Tools Reference
 
-| Tool | Description |
-|------|-------------|
-| [`list_components`](#list_components) | List all React components, filter by library or story status |
-| [`analyze_component`](#analyze_component) | Extract props, dependencies, and get story suggestions |
-| [`generate_story`](#generate_story) | Generate complete story files with variants and tests |
-| [`generate_test`](#generate_test) | Generate test files — vitest by default, Playwright if installed (Pro) |
-| [`generate_docs`](#generate_docs) | Generate MDX documentation (Pro) |
-| [`validate_story`](#validate_story) | Check stories for best practices and issues |
-| [`sync_all`](#sync_all) | Sync all components at once |
-| [`sync_component`](#sync_component) | Sync a single component's story/test/docs |
-| [`get_story_template`](#get_story_template) | Get a specific template |
-| [`list_templates`](#list_templates) | List all available templates |
-| [`get_component_coverage`](#get_component_coverage) | Get story coverage statistics |
-| [`suggest_stories`](#suggest_stories) | Get prioritized list of components needing stories |
-| [`check_health`](#check_health) | Check Storybook installation health — missing packages, outdated configs, version mismatches |
+| Tool | Description | Tier |
+|------|-------------|------|
+| [`list_components`](#list_components) | List all React components, filter by library or story status | Free |
+| [`analyze_component`](#analyze_component) | Extract props, dependencies, and get story suggestions | Free |
+| [`generate_story`](#generate_story) | Generate complete story files with variants and tests | Free (basic) / Pro |
+| [`update_story`](#update_story) | Regenerate a story while preserving your custom exports | Pro |
+| [`generate_test`](#generate_test) | Generate Vitest or Playwright test files | Pro |
+| [`generate_docs`](#generate_docs) | Generate MDX documentation | Pro |
+| [`generate_code_connect`](#generate_code_connect) | Generate Figma Code Connect `.figma.tsx` files | Pro |
+| [`validate_story`](#validate_story) | Check stories for best practices and issues | Free |
+| [`sync_all`](#sync_all) | Sync all components at once | Free (10 limit) / Pro |
+| [`sync_component`](#sync_component) | Sync a single component's story/test/docs | Free |
+| [`get_story_template`](#get_story_template) | Get a specific template | Free |
+| [`list_templates`](#list_templates) | List all available templates | Free |
+| [`get_component_coverage`](#get_component_coverage) | Get story coverage statistics | Free |
+| [`suggest_stories`](#suggest_stories) | Get prioritized list of components needing stories | Free |
+| [`check_health`](#check_health) | Check Storybook installation health | Free |
 
 ---
 
@@ -1131,6 +1131,179 @@ Check Storybook installation health — missing packages, outdated configs, and 
   "summary": "Preflight: 1 warning(s) out of 8 checks"
 }
 ```
+
+---
+
+### `update_story`
+
+> **Pro feature.** Regenerate a story file using the latest component analysis while preserving any exports you have written by hand.
+
+Unlike `generate_story` with `overwrite: true` (which clobbers everything), `update_story` detects which `export const X: Story` blocks you added and appends them below the regenerated content, separated by a comment marker.
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `componentPath` | string | required | Path to the component file |
+| `includeVariants` | boolean | `true` | Regenerate variant stories |
+| `includeInteractive` | boolean | `true` | Regenerate play function tests |
+| `includeA11y` | boolean | `false` | Regenerate accessibility stories |
+| `includeResponsive` | boolean | `false` | Regenerate viewport stories |
+| `template` | string | auto | Specific template to use |
+| `dryRun` | boolean | `false` | Preview merged result without writing |
+
+**Example:**
+
+```json
+{
+  "componentPath": "src/components/Button.tsx"
+}
+```
+
+**Response includes:**
+
+- `preserved` — array of user-written story names that were kept
+- `removed` — stories not in the merged output (usually empty)
+- `validation.warnings` — non-blocking import warnings
+- `summary` — human-readable result with list of preserved stories
+
+**How it works:**
+
+The tool looks for `export const X: Story` blocks that are not in the freshly generated content. Those are your custom stories. They get appended after a separator:
+
+```tsx
+// ─── User-added stories (preserved by update_story) ───
+export const MyEdgeCase: Story = {
+  args: { label: 'Edge case' },
+}
+```
+
+> **Note:** A version entry is recorded in `.forgekit/story-history.json` on every write (action: `merged`).
+
+---
+
+### `generate_code_connect`
+
+> **Pro feature.** Generate a `@figma/code-connect` `.figma.tsx` file that links your component to Figma Dev Mode.
+
+When published with `npx figma connect publish`, designers inspecting your component in Figma see your real React code — props, variants, and usage examples — instead of auto-generated snippets.
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `componentPath` | string | required | Path to the component file |
+| `figmaNodeUrl` | string | — | Figma component URL (`https://figma.com/design/<fileId>/...?node-id=...`). Omit to use a placeholder. |
+| `overwrite` | boolean | `false` | Replace existing `.figma.tsx` file |
+| `dryRun` | boolean | `false` | Preview output without writing |
+
+**Example:**
+
+```json
+{
+  "componentPath": "src/components/Button.tsx",
+  "figmaNodeUrl": "https://figma.com/design/abc123/MyDesignSystem?node-id=1%3A2"
+}
+```
+
+**Prop type mapping:**
+
+| TypeScript type | Figma binding |
+|-----------------|---------------|
+| `string` | `figma.string('PropName')` |
+| `boolean` | `figma.boolean('PropName')` |
+| `'a' \| 'b'` union | `figma.enum('PropName', { a: 'a', b: 'b' })` |
+| `ReactNode` / `children` | `figma.children(['*'])` |
+| `number` | `figma.number('PropName')` |
+
+Event handlers, `className`, `style`, and `ref` are excluded automatically.
+
+**Generated output** (`src/components/Button.figma.tsx`):
+
+```tsx
+import figma from '@figma/code-connect/react'
+import { Button } from './Button'
+
+figma.connect(Button, 'https://figma.com/design/abc123/MyDesignSystem?node-id=1%3A2', {
+  props: {
+    variant: figma.enum('Variant', {
+      "primary": "primary",
+      "secondary": "secondary",
+      "ghost": "ghost",
+    }),
+    disabled: figma.boolean('Disabled'),
+    children: figma.children(['*']),
+  },
+  example: ({ variant, disabled, children }) => (
+    <Button variant={variant} disabled={disabled}>{children}</Button>
+  ),
+})
+```
+
+**Publishing to Figma:**
+
+```bash
+npm install --save-dev @figma/code-connect
+npx figma connect login
+npx figma connect publish
+```
+
+See [Figma Integration](#figma-integration) for the full workflow.
+
+---
+
+## Figma Integration
+
+ForgeKit provides two complementary Figma integrations:
+
+### Code Connect — link components to Figma Dev Mode
+
+[Figma Code Connect](https://www.figma.com/developers/code-connect) attaches your real React component to a Figma component. Designers in Dev Mode see your actual props, variants, and a working code example instead of placeholder snippets.
+
+**Workflow:**
+
+1. Generate a Code Connect file for each component:
+
+   ```json
+   {
+     "componentPath": "src/components/Button.tsx",
+     "figmaNodeUrl": "https://figma.com/design/abc123/MyDesignSystem?node-id=1%3A2"
+   }
+   ```
+
+2. Install and publish:
+
+   ```bash
+   npm install --save-dev @figma/code-connect
+   npx figma connect login
+   npx figma connect publish
+   ```
+
+3. Open the component in Figma → Dev Mode → Code panel. Your component code appears.
+
+> **Tip:** Copy the Figma node URL by right-clicking a component on the canvas → "Copy link".
+
+### Code to Canvas — push story renders into Figma (via `forgekit-context`)
+
+The `sync_stories_to_figma` tool (part of [`forgekit-context`](https://npmjs.com/package/forgekit-context)) connects to the Figma desktop app's Dev Mode MCP server and pushes each component's Default story as an editable frame on your canvas.
+
+**Requirements:**
+
+- Figma desktop app (not browser)
+- Dev Mode MCP server enabled: **Figma menu → Preferences → Enable Dev Mode MCP Server**
+- `forgekit-context` installed and running
+- Local Storybook running (`npm run storybook`)
+
+**Example call via `forgekit-context`:**
+
+```json
+{
+  "storybookUrl": "http://localhost:6006",
+  "dryRun": true
+}
+```
+
+Remove `dryRun` to push stories to the canvas.
 
 ---
 
