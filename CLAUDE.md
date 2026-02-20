@@ -13,3 +13,7 @@ HIGH PRIORITY:
 2. For every project documentation should be automated, generated and updated as changes are made to code, components, ideas, plans, roadmaps, etc.  Please use Mintlify, Docusaurus  or Featurebase for all of the docs across the repo.  If not yet built, there needs to be a reusable SKILL or MCP of whichever docs solution we decide upon, which will then be used for all future projects moving forward.
 
 3. Clarifying questions and suggestions are important
+
+4. Update the README.md section "What's New in {version}" where "version" is newest and content are changes, updates, etc.  Focus on new features and big fixes, otherwise use the lower level changes.
+
+5. Use git bash if bash unavailable
