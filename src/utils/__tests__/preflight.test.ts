@@ -62,4 +62,31 @@ describe('preflight', () => {
     expect(result.summary).toBeTruthy()
     expect(typeof result.summary).toBe('string')
   })
+
+  it('passes duplicate story check when no stories exist', async () => {
+    const result = await runPreflight(tmpDir)
+    const dupCheck = result.checks.find(c => c.name === 'stories:duplicates')
+    expect(dupCheck).toBeDefined()
+    expect(dupCheck!.status).toBe('pass')
+  })
+
+  it('detects duplicate story files and suggests removing scaffold file', async () => {
+    const dir = path.join(tmpDir, 'dup-test')
+    // Co-located story (tool-generated)
+    const colocated = path.join(dir, 'src', 'components', 'base')
+    // Scaffold story
+    const scaffold = path.join(dir, 'src', 'stories')
+    fs.mkdirSync(colocated, { recursive: true })
+    fs.mkdirSync(scaffold, { recursive: true })
+
+    fs.writeFileSync(path.join(colocated, 'Button.stories.tsx'), `export default {}`)
+    fs.writeFileSync(path.join(scaffold, 'Button.stories.ts'), `export default {}`)
+
+    const result = await runPreflight(dir)
+    const dupCheck = result.checks.find(c => c.name === 'stories:duplicates:button')
+    expect(dupCheck).toBeDefined()
+    expect(dupCheck!.status).toBe('fail')
+    // Fix should point to the scaffold file
+    expect(dupCheck!.fix).toContain('src/stories/Button.stories.ts')
+  })
 })

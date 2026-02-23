@@ -7,6 +7,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import fg from 'fast-glob'
 
 export interface PreflightResult {
   passed: boolean
@@ -40,6 +41,9 @@ export async function runPreflight(rootDir: string): Promise<PreflightResult> {
 
   // 4. Check .storybook/preview.ts for outdated patterns
   checkPreviewConfig(rootDir, checks)
+
+  // 5. Check for duplicate story IDs across the project
+  await checkDuplicateStoryIds(rootDir, checks)
 
   const fails = checks.filter(c => c.status === 'fail')
   const warns = checks.filter(c => c.status === 'warn')
@@ -246,7 +250,82 @@ function checkMainConfig(rootDir: string, checks: PreflightCheck[]) {
   }
 }
 
-function checkPreviewConfig(rootDir: string, checks: PreflightCheck[]) {
+/**
+ * Detect story files that share a component name but live in different
+ * directories — this produces duplicate story IDs in Storybook and causes
+ * the "Unable to index files" fatal error.
+ *
+ * Strategy: group all story files by their basename (e.g. "Button"),
+ * then flag any group that has more than one file.
+ */
+async function checkDuplicateStoryIds(
+  rootDir: string,
+  checks: PreflightCheck[]
+): Promise<void> {
+  try {
+    const storyFiles = await fg(
+      ['**/*.stories.{ts,tsx,js,jsx}', '**/*.mdx'],
+      {
+        cwd: rootDir,
+        ignore: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/build/**'],
+        absolute: false,
+      }
+    )
+
+    // Group files by normalised basename (case-insensitive, no extension)
+    const byBasename = new Map<string, string[]>()
+    for (const file of storyFiles) {
+      // Strip .stories.tsx / .stories.ts / .mdx etc.
+      const base = path
+        .basename(file)
+        .replace(/\.stories\.[a-z]+$/i, '')
+        .replace(/\.mdx$/i, '')
+        .toLowerCase()
+      const existing = byBasename.get(base) ?? []
+      existing.push(file)
+      byBasename.set(base, existing)
+    }
+
+    const duplicates: Array<{ name: string; files: string[] }> = []
+    for (const [name, files] of byBasename) {
+      if (files.length > 1) {
+        duplicates.push({ name, files })
+      }
+    }
+
+    if (duplicates.length === 0) {
+      checks.push({
+        name: 'stories:duplicates',
+        status: 'pass',
+        message: 'No duplicate story files detected',
+      })
+      return
+    }
+
+    for (const { name, files } of duplicates) {
+      // Identify which files look like Storybook scaffold boilerplate:
+      // they live in a root-level src/stories/ or stories/ directory.
+      const scaffoldFiles = files.filter(f =>
+        /^src[\/]stories[\/]/i.test(f) || /^stories[\/]/i.test(f)
+      )
+      const fix =
+        scaffoldFiles.length > 0
+          ? `Remove scaffold file(s): ${scaffoldFiles.map(f => `./${f}`).join(', ')}`
+          : `Remove or rename one of: ${files.map(f => `./${f}`).join(', ')}`
+
+      checks.push({
+        name: `stories:duplicates:${name}`,
+        status: 'fail',
+        message: `Duplicate story files for "${name}": ${files.map(f => `./${f}`).join(', ')}`,
+        fix,
+      })
+    }
+  } catch {
+    // Non-fatal — skip if glob fails
+  }
+}
+
+function checkPreviewConfig(rootDir: string, checks: PreflightCheck[]): void {
   const previewTs = readFileIfExists(
     path.join(rootDir, '.storybook', 'preview.ts')
   )
