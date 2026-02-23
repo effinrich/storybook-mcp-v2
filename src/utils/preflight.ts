@@ -305,22 +305,48 @@ async function checkDuplicateStoryIds(
     }
 
     for (const { name, files } of duplicates) {
-      // Identify which files look like Storybook scaffold boilerplate:
+      // Scaffold files are boilerplate from `npx storybook init`:
       // they live in a root-level src/stories/ or stories/ directory.
       const scaffoldFiles = files.filter(
         f => /^src[\/]stories[\/]/i.test(f) || /^stories[\/]/i.test(f)
       )
-      const fix =
-        scaffoldFiles.length > 0
-          ? `Remove scaffold file(s): ${scaffoldFiles.map(f => `./${f}`).join(', ')}`
-          : `Remove or rename one of: ${files.map(f => `./${f}`).join(', ')}`
 
-      checks.push({
-        name: `stories:duplicates:${name}`,
-        status: 'fail',
-        message: `Duplicate story files for "${name}": ${files.map(f => `./${f}`).join(', ')}`,
-        fix
-      })
+      if (scaffoldFiles.length > 0) {
+        // Auto-remove scaffold files — safe to delete, they are generated boilerplate
+        const removed: string[] = []
+        const failed: string[] = []
+        for (const scaffold of scaffoldFiles) {
+          try {
+            fs.unlinkSync(path.join(rootDir, scaffold))
+            removed.push(`./${scaffold}`)
+          } catch {
+            failed.push(`./${scaffold}`)
+          }
+        }
+        if (removed.length > 0) {
+          checks.push({
+            name: `stories:duplicates:${name}`,
+            status: 'warn',
+            message: `Removed ${removed.length} Storybook scaffold file(s) for "${name}" that conflicted with generated stories: ${removed.join(', ')}`
+          })
+        }
+        if (failed.length > 0) {
+          checks.push({
+            name: `stories:duplicates:${name}:unremovable`,
+            status: 'fail',
+            message: `Could not auto-remove scaffold file(s) for "${name}": ${failed.join(', ')}`,
+            fix: `Manually delete: ${failed.join(', ')}`
+          })
+        }
+      } else {
+        // Both files are real (non-scaffold) — can't determine which to remove
+        checks.push({
+          name: `stories:duplicates:${name}`,
+          status: 'fail',
+          message: `Duplicate story files for "${name}": ${files.map(f => `./${f}`).join(', ')}`,
+          fix: `Remove or rename one of: ${files.map(f => `./${f}`).join(', ')}`
+        })
+      }
     }
   } catch {
     // Non-fatal — skip if glob fails

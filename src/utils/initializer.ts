@@ -7,6 +7,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import fg from 'fast-glob'
 import type {
   StorybookMCPConfig,
   ComponentInfo,
@@ -184,6 +185,77 @@ function extractStoryExports(storyContent: string): string[] {
 }
 
 // ===========================================
+// Scaffold Conflict Cleanup
+// ===========================================
+
+/**
+ * Detect and remove Storybook scaffold story files (created by `npx storybook init`)
+ * that conflict with real component stories. Scaffold files live in `src/stories/`
+ * or `stories/` at the project root and produce duplicate story IDs that crash
+ * Storybook's file indexer with an "Unable to index files" error.
+ *
+ * This runs automatically before every sync so users never have to manually
+ * delete scaffold boilerplate.
+ */
+export async function removeScaffoldConflicts(
+  rootDir: string
+): Promise<string[]> {
+  const removed: string[] = []
+  try {
+    const storyFiles = await fg(
+      ['**/*.stories.{ts,tsx,js,jsx}', '**/*.mdx'],
+      {
+        cwd: rootDir,
+        ignore: [
+          '**/node_modules/**',
+          '**/dist/**',
+          '**/.next/**',
+          '**/build/**'
+        ],
+        absolute: false
+      }
+    )
+
+    // Group files by normalised basename (case-insensitive, no extension)
+    const byBasename = new Map<string, string[]>()
+    for (const file of storyFiles) {
+      const base = path
+        .basename(file)
+        .replace(/\.stories\.[a-z]+$/i, '')
+        .replace(/\.mdx$/i, '')
+        .toLowerCase()
+      const existing = byBasename.get(base) ?? []
+      existing.push(file)
+      byBasename.set(base, existing)
+    }
+
+    for (const [, files] of byBasename) {
+      if (files.length <= 1) continue
+      // Scaffold files live in root-level src/stories/ or stories/
+      const scaffoldFiles = files.filter(
+        f => /^src[\/]stories[\/]/i.test(f) || /^stories[\/]/i.test(f)
+      )
+      for (const scaffold of scaffoldFiles) {
+        try {
+          fs.unlinkSync(path.join(rootDir, scaffold))
+          removed.push(scaffold)
+          console.error(
+            `[storybook-mcp] Removed scaffold file that conflicted with generated story: ${scaffold}`
+          )
+        } catch {
+          console.error(
+            `[storybook-mcp] Warning: could not remove scaffold file: ${scaffold}`
+          )
+        }
+      }
+    }
+  } catch {
+    // Non-fatal — skip if glob fails
+  }
+  return removed
+}
+
+// ===========================================
 // Main Initialization Function
 // ===========================================
 
@@ -212,6 +284,12 @@ export async function initializeComponents(
     skipped: 0,
     errors: [],
     details: []
+  }
+
+  // Remove any Storybook scaffold story files (from `npx storybook init`) that
+  // conflict with real component stories — avoids duplicate story ID errors.
+  if (!dryRun) {
+    await removeScaffoldConflicts(config.rootDir)
   }
 
   // Load cache for change detection

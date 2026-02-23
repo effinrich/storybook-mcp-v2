@@ -72,31 +72,33 @@ describe('preflight', () => {
     expect(dupCheck!.status).toBe('pass')
   })
 
-  it('detects duplicate story files and suggests removing scaffold file', async () => {
+  it('auto-removes scaffold story file when it conflicts with a generated story', async () => {
     const dir = path.join(tmpDir, 'dup-test')
     // Co-located story (tool-generated)
     const colocated = path.join(dir, 'src', 'components', 'base')
-    // Scaffold story
-    const scaffold = path.join(dir, 'src', 'stories')
+    // Scaffold story (from `npx storybook init`)
+    const scaffoldDir = path.join(dir, 'src', 'stories')
     fs.mkdirSync(colocated, { recursive: true })
-    fs.mkdirSync(scaffold, { recursive: true })
+    fs.mkdirSync(scaffoldDir, { recursive: true })
 
+    const scaffoldFile = path.join(scaffoldDir, 'Button.stories.ts')
     fs.writeFileSync(
       path.join(colocated, 'Button.stories.tsx'),
       `export default {}`
     )
-    fs.writeFileSync(
-      path.join(scaffold, 'Button.stories.ts'),
-      `export default {}`
-    )
+    fs.writeFileSync(scaffoldFile, `export default {}`)
 
     const result = await runPreflight(dir)
     const dupCheck = result.checks.find(
       c => c.name === 'stories:duplicates:button'
     )
     expect(dupCheck).toBeDefined()
-    expect(dupCheck!.status).toBe('fail')
-    // Fix should point to the scaffold file
-    expect(dupCheck!.fix).toContain('src/stories/Button.stories.ts')
+    // Should be warn (cleaned up), not fail
+    expect(dupCheck!.status).toBe('warn')
+    expect(dupCheck!.message).toContain('Removed')
+    // Scaffold file should be gone
+    expect(fs.existsSync(scaffoldFile)).toBe(false)
+    // Real story should still exist
+    expect(fs.existsSync(path.join(colocated, 'Button.stories.tsx'))).toBe(true)
   })
 })
