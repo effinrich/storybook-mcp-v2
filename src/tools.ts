@@ -20,7 +20,10 @@ import { validateLicense, requireFeature } from './utils/license.js'
 import { runPreflight } from './utils/preflight.js'
 import { mergeStories, parseStoryExports } from './utils/story-merger.js'
 import { recordStoryVersion, hashContent } from './utils/story-history.js'
-import { generateCodeConnect, writeCodeConnectFile } from './utils/code-connect-generator.js'
+import {
+  generateCodeConnect,
+  writeCodeConnectFile
+} from './utils/code-connect-generator.js'
 
 /**
  * Tool: list_components
@@ -116,7 +119,11 @@ export async function generateStoryTool(
   const story = await generateStory(config, analysis, storyOptions)
 
   // Pre-write import validation (non-blocking)
-  const importValidation = validateGeneratedStory(config, story.content, args.componentPath)
+  const importValidation = validateGeneratedStory(
+    config,
+    story.content,
+    args.componentPath
+  )
 
   // Write to disk unless dry run
   let written = false
@@ -128,8 +135,12 @@ export async function generateStoryTool(
         storyPath: story.filePath,
         componentPath: args.componentPath,
         generatedAt: new Date().toISOString(),
-        storyHash: hashContent(fs.existsSync(storyFullPath) ? fs.readFileSync(storyFullPath, 'utf-8') : story.content),
-        action: 'created',
+        storyHash: hashContent(
+          fs.existsSync(storyFullPath)
+            ? fs.readFileSync(storyFullPath, 'utf-8')
+            : story.content
+        ),
+        action: 'created'
       })
     }
   }
@@ -334,24 +345,6 @@ export async function syncAll(
     dryRun: args?.dryRun ?? false
   }
 
-  // Force disable Pro features if no license
-  if (license.tier === 'free') {
-    if (typeof globalThis !== 'undefined' && options.generateTests) {
-      // eslint-disable-next-line no-console
-      globalThis.console?.warn?.(
-        '[storybook-mcp] Warning: Test generation disabled (Free Tier)'
-      )
-      options.generateTests = false
-    }
-    if (typeof globalThis !== 'undefined' && options.generateDocs) {
-      // eslint-disable-next-line no-console
-      console.warn(
-        '[storybook-mcp] Warning: Docs generation disabled (Free Tier)'
-      )
-      options.generateDocs = false
-    }
-  }
-
   const result = await initializeComponents(config, {
     ...options,
     maxComponents:
@@ -423,10 +416,6 @@ export async function generateTestTool(
     dryRun?: boolean
   }
 ) {
-  // Check license
-  const license = validateLicense(config)
-  requireFeature('test_generation', license)
-
   const analysis = await analyzeComponent(config, args.componentPath)
   const test = await generateTest(config, analysis)
 
@@ -471,10 +460,6 @@ export async function generateDocsTool(
     dryRun?: boolean
   }
 ) {
-  // Check license
-  const license = validateLicense(config)
-  requireFeature('docs_generation', license)
-
   const analysis = await analyzeComponent(config, args.componentPath)
   const docs = await generateDocs(config, analysis)
 
@@ -526,7 +511,7 @@ export async function updateStoryTool(
     includeInteractive: args.includeInteractive ?? true,
     includeA11y: args.includeA11y ?? false,
     includeResponsive: args.includeResponsive ?? false,
-    overwrite: true,
+    overwrite: true
   }
   if (args.template) {
     storyOptions.template = args.template as StoryGenerationOptions['template']
@@ -548,14 +533,22 @@ export async function updateStoryTool(
 
   if (existingContent) {
     const generatedExports = parseStoryExports(story.content)
-    const merged = mergeStories(story.content, existingContent, generatedExports)
+    const merged = mergeStories(
+      story.content,
+      existingContent,
+      generatedExports
+    )
     finalContent = merged.content
     preserved = merged.preserved
     removed = merged.removed
   }
 
   // Pre-write import validation (non-blocking)
-  const importValidation = validateGeneratedStory(config, finalContent, args.componentPath)
+  const importValidation = validateGeneratedStory(
+    config,
+    finalContent,
+    args.componentPath
+  )
 
   // Write merged content
   let written = false
@@ -572,7 +565,7 @@ export async function updateStoryTool(
       componentPath: args.componentPath,
       generatedAt: new Date().toISOString(),
       storyHash: hashContent(finalContent),
-      action: existingContent ? 'merged' : 'created',
+      action: existingContent ? 'merged' : 'created'
     })
   }
 
@@ -587,7 +580,7 @@ export async function updateStoryTool(
       ? `Updated story for ${analysis.name} (dry run — not written)${preserved.length > 0 ? `, would preserve: ${preserved.join(', ')}` : ''}`
       : written
         ? `Updated story at ${story.filePath}${preserved.length > 0 ? `. Preserved user stories: ${preserved.join(', ')}` : ''}`
-        : `Failed to write story at ${story.filePath}`,
+        : `Failed to write story at ${story.filePath}`
   }
 }
 
@@ -625,6 +618,6 @@ export async function generateCodeConnectTool(
       ? `Generated Code Connect for ${analysis.name} (dry run — not written)`
       : written
         ? `Created ${cc.filePath}${!args.figmaNodeUrl ? ' — replace FIGMA_NODE_URL_HERE with your Figma component URL' : ''}`
-        : `Code Connect file already exists at ${cc.filePath} (use overwrite: true to replace)`,
+        : `Code Connect file already exists at ${cc.filePath} (use overwrite: true to replace)`
   }
 }

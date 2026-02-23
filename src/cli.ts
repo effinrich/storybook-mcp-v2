@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
  * Storybook MCP CLI
- * 
+ *
  * Run the MCP server with configuration from:
  * 1. storybook-mcp.config.json in current directory
  * 2. package.json "storybook-mcp" field
  * 3. Command line arguments
- * 
+ *
  * On startup, automatically syncs components:
  * - Creates missing stories, tests, and docs
  * - Updates existing files when components change
@@ -18,10 +18,111 @@ import { runServer } from './index.js'
 import type { StorybookMCPConfig } from './types.js'
 import { DEFAULT_CONFIG } from './types.js'
 import { initializeComponents } from './utils/initializer.js'
-import { validateLicenseAsync } from './utils/license.js'
+import { validateLicenseAsync, resetLicenseCache } from './utils/license.js'
 import { runSetup } from './utils/setup.js'
 import { runPreflight } from './utils/preflight.js'
-import { POLAR_UPGRADE_URL } from './utils/constants.js'
+import { POLAR_UPGRADE_URL, FREE_TIER_MAX_SYNC } from './utils/constants.js'
+
+/**
+ * Load environment variables from .env and .env.local files in the project directory.
+ * Values from .env.local override .env, but neither overrides existing process.env values.
+ * This allows STORYBOOK_MCP_LICENSE and other vars to be stored in .env.local.
+ */
+function loadEnvFiles(cwd: string): void {
+  const envFiles = ['.env', '.env.local'] // .env.local wins over .env
+  const fromFiles: Record<string, string> = {}
+
+  for (const file of envFiles) {
+    const filePath = path.join(cwd, file)
+    if (!fs.existsSync(filePath)) continue
+    try {
+      const content = fs.readFileSync(filePath, 'utf-8')
+      for (const line of content.split(/\r?\n/)) {
+        const trimmed = line.trim()
+        // Skip blanks and comments
+        if (!trimmed || trimmed.startsWith('#')) continue
+        const eqIdx = trimmed.indexOf('=')
+        if (eqIdx === -1) continue
+        const key = trimmed.slice(0, eqIdx).trim()
+        let value = trimmed.slice(eqIdx + 1).trim()
+        // Strip surrounding quotes
+        if (
+          (value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))
+        ) {
+          value = value.slice(1, -1)
+        }
+        fromFiles[key] = value // later file (.env.local) overrides earlier (.env)
+      }
+    } catch {
+      // Ignore unreadable files
+    }
+  }
+
+  // Apply collected values — never override existing process.env (system / MCP config env takes priority)
+  let loaded = 0
+  for (const [key, value] of Object.entries(fromFiles)) {
+    if (!(key in process.env)) {
+      process.env[key] = value
+      loaded++
+    }
+  }
+
+  if (loaded > 0) {
+    console.error(
+      `[storybook-mcp] Loaded ${loaded} env var(s) from .env/.env.local`
+    )
+  }
+
+  // Confirm license key presence (value masked)
+  if (process.env.STORYBOOK_MCP_LICENSE) {
+    console.error('[storybook-mcp] STORYBOOK_MCP_LICENSE is set in environment')
+  }
+}
+
+/**
+ * Serialize config to storybook-mcp.config.json.
+ * Only writes user-facing fields — never rootDir (always CWD at runtime).
+ * @param configPath  Absolute path to the config file
+ * @param config      Resolved config object
+ * @param overwrite   If false (default), skips if the file already exists
+ */
+function writeConfigFile(
+  configPath: string,
+  config: StorybookMCPConfig,
+  overwrite = false
+): boolean {
+  if (!overwrite && fs.existsSync(configPath)) return false
+
+  // Build the persisted object — only the fields a user would want to edit
+  const persisted: Record<string, unknown> = {
+    framework: config.framework,
+    libraries: config.libraries,
+    storyFilePattern: config.storyFilePattern,
+    componentPatterns: config.componentPatterns,
+    excludePatterns: config.excludePatterns
+  }
+
+  // Carry over optional fields only when explicitly set
+  if (config.storybookVersion)
+    persisted.storybookVersion = config.storybookVersion
+  if (config.templatesDir) persisted.templatesDir = config.templatesDir
+  // NOTE: licenseKey intentionally omitted — keep it in env vars / .env.local
+
+  try {
+    fs.writeFileSync(
+      configPath,
+      JSON.stringify(persisted, null, 2) + '\n',
+      'utf-8'
+    )
+    return true
+  } catch (err) {
+    console.error(
+      `[storybook-mcp] Warning: could not write config file: ${err}`
+    )
+    return false
+  }
+}
 
 // Parse CLI arguments
 function parseArgs(): {
@@ -35,10 +136,11 @@ function parseArgs(): {
   help: boolean
   setup: boolean
   force: boolean
+  resetLicense: boolean
   libName?: string
 } {
   const args = process.argv.slice(2)
-  
+
   // Parse --lib=<name> argument
   let libName: string | undefined
   const libArg = args.find(arg => arg.startsWith('--lib='))
@@ -57,7 +159,8 @@ function parseArgs(): {
     help: args.includes('--help') || args.includes('-h'),
     setup: args.includes('--setup'),
     force: args.includes('--force'),
-    libName,
+    resetLicense: args.includes('--reset-license'),
+    libName
   }
 }
 
@@ -84,6 +187,7 @@ OPTIONS:
   --no-docs       Don't generate MDX docs
   --no-update     Don't update existing files
   --force         Overwrite existing files
+  --reset-license Clear the cached license result and re-validate against Polar API
   -h, --help      Show this help message
 
 CONFIGURATION:
@@ -98,12 +202,20 @@ CONFIGURATION:
   }
 
   Or set STORYBOOK_MCP_LICENSE environment variable.
+  The variable is also auto-loaded from .env or .env.local in the project root.
+
+LICENSE KEY PRIORITY (highest wins):
+  1. System / MCP client environment (e.g., Claude Desktop config "env" block)
+  2. .env.local in project root
+  3. .env in project root
+  4. licenseKey field in storybook-mcp.config.json
 
 LICENSE:
-  Free tier: 10 components, basic stories only
+  Free tier: ${FREE_TIER_MAX_SYNC} components, basic stories only
   Pro ($29 launch price): Unlimited components, tests, docs, all templates
   
   Get Pro: ${POLAR_UPGRADE_URL}
+  Troubleshoot: run with --reset-license to force re-validation
 
 MORE INFO:
   https://npmjs.com/package/forgekit-storybook-mcp
@@ -114,8 +226,20 @@ async function main() {
   const cwd = process.cwd()
   const args = parseArgs()
 
+  // Load .env / .env.local from project root BEFORE any config or license work
+  loadEnvFiles(cwd)
+
   if (args.help) {
     showHelp()
+    process.exit(0)
+  }
+
+  // Handle --reset-license: clear cache then exit (user can re-run normally)
+  if (args.resetLicense) {
+    resetLicenseCache()
+    console.error(
+      '[storybook-mcp] License cache cleared. Re-run without --reset-license to validate your key.'
+    )
     process.exit(0)
   }
 
@@ -124,8 +248,24 @@ async function main() {
     await runSetup(cwd, {
       dryRun: args.dryRun,
       force: args.force,
-      libName: args.libName,
+      libName: args.libName
     })
+
+    // After setup, generate storybook-mcp.config.json with detected values
+    if (!args.dryRun) {
+      const detectedConfig = await autoDetectConfig(cwd)
+      const configPath = path.join(cwd, 'storybook-mcp.config.json')
+      const existed = fs.existsSync(configPath)
+      const written = writeConfigFile(configPath, detectedConfig, true) // always overwrite during --setup
+      if (written) {
+        console.error(
+          existed
+            ? `[storybook-mcp] Updated storybook-mcp.config.json with detected values`
+            : `[storybook-mcp] Created storybook-mcp.config.json — review and commit this file`
+        )
+      }
+    }
+
     process.exit(0)
   }
 
@@ -147,9 +287,16 @@ async function main() {
             break
           }
           // Check nested: libs/<name>/<sub>/.storybook
-          const subEntries = fs.readdirSync(path.join(baseDir, entry.name), { withFileTypes: true })
+          const subEntries = fs.readdirSync(path.join(baseDir, entry.name), {
+            withFileTypes: true
+          })
           for (const sub of subEntries) {
-            if (sub.isDirectory() && fs.existsSync(path.join(baseDir, entry.name, sub.name, '.storybook'))) {
+            if (
+              sub.isDirectory() &&
+              fs.existsSync(
+                path.join(baseDir, entry.name, sub.name, '.storybook')
+              )
+            ) {
               hasStorybookConfig = true
               break
             }
@@ -194,7 +341,7 @@ Use --setup --dry-run to preview without writing files.
     config = {
       ...DEFAULT_CONFIG,
       rootDir: cwd,
-      ...configFile,
+      ...configFile
     } as StorybookMCPConfig
     console.error(`[storybook-mcp] Loaded config from ${configPath}`)
   } else if (fs.existsSync(packagePath)) {
@@ -204,26 +351,46 @@ Use --setup --dry-run to preview without writing files.
       config = {
         ...DEFAULT_CONFIG,
         rootDir: cwd,
-        ...pkg['storybook-mcp'],
+        ...pkg['storybook-mcp']
       } as StorybookMCPConfig
       console.error(`[storybook-mcp] Loaded config from package.json`)
+      // Migrate package.json config to its own file
+      if (writeConfigFile(configPath, config)) {
+        console.error(
+          `[storybook-mcp] Created storybook-mcp.config.json (migrated from package.json) — review and commit this file`
+        )
+      }
     } else {
       // Use default config with auto-detection
       config = await autoDetectConfig(cwd)
+      if (writeConfigFile(configPath, config)) {
+        console.error(
+          `[storybook-mcp] Created storybook-mcp.config.json with auto-detected values — review and commit this file`
+        )
+      }
     }
   } else {
     // Use default config with auto-detection
     config = await autoDetectConfig(cwd)
+    if (writeConfigFile(configPath, config)) {
+      console.error(
+        `[storybook-mcp] Created storybook-mcp.config.json with auto-detected values — review and commit this file`
+      )
+    }
   }
 
   // Validate config
   if (!config.libraries || config.libraries.length === 0) {
-    console.error('[storybook-mcp] Warning: No libraries configured. Using auto-detection.')
+    console.error(
+      '[storybook-mcp] Warning: No libraries configured. Using auto-detection.'
+    )
     config = await autoDetectConfig(cwd)
   }
 
   console.error(`[storybook-mcp] Framework: ${config.framework}`)
-  console.error(`[storybook-mcp] Libraries: ${config.libraries.map(l => l.name).join(', ')}`)
+  console.error(
+    `[storybook-mcp] Libraries: ${config.libraries.map(l => l.name).join(', ')}`
+  )
 
   // Run preflight checks
   const preflight = await runPreflight(cwd)
@@ -245,39 +412,38 @@ Use --setup --dry-run to preview without writing files.
 
   // Validate license (async with caching)
   const license = await validateLicenseAsync(config)
-  console.error(`[storybook-mcp] License: ${license.tier}${license.tier === 'free' ? ` (max ${license.maxSyncLimit} components)` : ''}`)
+  console.error(
+    `[storybook-mcp] License: ${license.tier}${license.tier === 'free' ? ` (max ${license.maxSyncLimit} components)` : ''}`
+  )
 
   // Run initialization unless skipped
   if (!args.skipInit) {
     console.error(`[storybook-mcp] Running component sync...`)
-    
-    // Free tier: disable test and docs generation
-    const canGenerateTests = license.tier === 'pro' && !args.noTests
-    const canGenerateDocs = license.tier === 'pro' && !args.noDocs
-
-    if (license.tier === 'free') {
-      if (!args.noTests) console.error('[storybook-mcp] Test generation requires Pro license')
-      if (!args.noDocs) console.error('[storybook-mcp] Docs generation requires Pro license')
-    }
 
     const initResult = await initializeComponents(config, {
       generateStories: !args.noStories,
-      generateTests: canGenerateTests,
-      generateDocs: canGenerateDocs,
+      generateTests: !args.noTests,
+      generateDocs: !args.noDocs,
       updateExisting: !args.noUpdate,
       dryRun: args.dryRun,
-      maxComponents: license.tier === 'free' ? license.maxSyncLimit : undefined,
+      maxComponents: license.tier === 'free' ? license.maxSyncLimit : undefined
     })
 
     if (args.dryRun) {
       console.error(`[storybook-mcp] Dry run complete. Would have:`)
-      console.error(`  Created: ${initResult.created.stories} stories, ${initResult.created.tests} tests, ${initResult.created.docs} docs`)
-      console.error(`  Updated: ${initResult.updated.stories} stories, ${initResult.updated.tests} tests, ${initResult.updated.docs} docs`)
+      console.error(
+        `  Created: ${initResult.created.stories} stories, ${initResult.created.tests} tests, ${initResult.created.docs} docs`
+      )
+      console.error(
+        `  Updated: ${initResult.updated.stories} stories, ${initResult.updated.tests} tests, ${initResult.updated.docs} docs`
+      )
     }
 
     // If init-only mode, exit after initialization
     if (args.initOnly) {
-      console.error(`[storybook-mcp] Initialization complete. Exiting (--init-only mode).`)
+      console.error(
+        `[storybook-mcp] Initialization complete. Exiting (--init-only mode).`
+      )
       process.exit(0)
     }
   } else {
@@ -307,23 +473,34 @@ async function autoDetectConfig(rootDir: string): Promise<StorybookMCPConfig> {
         if (depth > 2) return
         const entries = fs.readdirSync(dir, { withFileTypes: true })
         for (const entry of entries) {
-          if (!entry.isDirectory() || entry.name.startsWith('.') || entry.name === 'node_modules') continue
+          if (
+            !entry.isDirectory() ||
+            entry.name.startsWith('.') ||
+            entry.name === 'node_modules'
+          )
+            continue
           const entryPath = path.join(dir, entry.name)
           const srcPath = path.join(entryPath, 'src')
-          const hasProjectJson = fs.existsSync(path.join(entryPath, 'project.json'))
+          const hasProjectJson = fs.existsSync(
+            path.join(entryPath, 'project.json')
+          )
 
           if (fs.existsSync(srcPath) && hasProjectJson) {
             const relPath = path.relative(rootDir, entryPath)
             const libRelPath = path.relative(rootDir, entryPath)
             // Build a readable name from the path: libs/shared/ui → shared-ui
-            const nameParts = path.relative(path.join(rootDir, base), entryPath).split(path.sep)
+            const nameParts = path
+              .relative(path.join(rootDir, base), entryPath)
+              .split(path.sep)
             const libName = nameParts.join('-')
-            const prefix = nameParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' / ')
+            const prefix = nameParts
+              .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+              .join(' / ')
 
             libraries.push({
               name: libName,
               path: relPath,
-              storyTitlePrefix: prefix,
+              storyTitlePrefix: prefix
             })
           } else if (!hasProjectJson) {
             // Could be a grouping folder (e.g., libs/shared/) — recurse
@@ -339,10 +516,25 @@ async function autoDetectConfig(rootDir: string): Promise<StorybookMCPConfig> {
     // Note: componentPatterns include **/src/**/*.tsx, so lib paths should be
     // the project/package root (not src/ subdirs) to avoid double-pathing
     const possiblePaths = [
-      { check: 'src/components', path: '.', name: 'components', prefix: 'Components' },
+      {
+        check: 'src/components',
+        path: '.',
+        name: 'components',
+        prefix: 'Components'
+      },
       { check: 'src/lib', path: '.', name: 'lib', prefix: 'Lib' },
-      { check: 'packages/ui/src', path: 'packages/ui', name: 'ui', prefix: 'UI' },
-      { check: 'apps/web/src/components', path: 'apps/web', name: 'web', prefix: 'Web / Components' },
+      {
+        check: 'packages/ui/src',
+        path: 'packages/ui',
+        name: 'ui',
+        prefix: 'UI'
+      },
+      {
+        check: 'apps/web/src/components',
+        path: 'apps/web',
+        name: 'web',
+        prefix: 'Web / Components'
+      }
     ]
 
     for (const { check, path: libPath, name, prefix } of possiblePaths) {
@@ -351,7 +543,7 @@ async function autoDetectConfig(rootDir: string): Promise<StorybookMCPConfig> {
         libraries.push({
           name,
           path: libPath,
-          storyTitlePrefix: prefix,
+          storyTitlePrefix: prefix
         })
       }
     }
@@ -364,7 +556,7 @@ async function autoDetectConfig(rootDir: string): Promise<StorybookMCPConfig> {
       libraries.push({
         name: 'src',
         path: 'src',
-        storyTitlePrefix: 'Components',
+        storyTitlePrefix: 'Components'
       })
     }
   }
@@ -375,12 +567,15 @@ async function autoDetectConfig(rootDir: string): Promise<StorybookMCPConfig> {
     const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf-8'))
     const deps = {
       ...pkg.dependencies,
-      ...pkg.devDependencies,
+      ...pkg.devDependencies
     }
 
     if (deps['@chakra-ui/react']) {
       framework = 'chakra'
-    } else if (deps['@radix-ui/react-slot'] || deps['class-variance-authority']) {
+    } else if (
+      deps['@radix-ui/react-slot'] ||
+      deps['class-variance-authority']
+    ) {
       framework = 'shadcn'
     } else if (deps['tamagui']) {
       framework = 'tamagui'
@@ -389,18 +584,20 @@ async function autoDetectConfig(rootDir: string): Promise<StorybookMCPConfig> {
     }
   }
 
-  console.error(`[storybook-mcp] Auto-detected ${libraries.length} libraries, framework: ${framework}`)
+  console.error(
+    `[storybook-mcp] Auto-detected ${libraries.length} libraries, framework: ${framework}`
+  )
 
   return {
     ...DEFAULT_CONFIG,
     rootDir,
     libraries,
-    framework,
+    framework
   } as StorybookMCPConfig
 }
 
 // Run
-main().catch((error) => {
+main().catch(error => {
   console.error('[storybook-mcp] Fatal error:', error)
   process.exit(1)
 })
