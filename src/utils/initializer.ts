@@ -10,13 +10,16 @@ import crypto from 'node:crypto'
 import type {
   StorybookMCPConfig,
   ComponentInfo,
-  ComponentAnalysis,
+  ComponentAnalysis
 } from '../types.js'
 import { scanComponents, analyzeComponent } from './scanner.js'
 import { POLAR_UPGRADE_URL, CACHE, FILE_EXTENSIONS } from './constants.js'
 import { generateStory, writeStoryFile } from './generator.js'
 import { generateTest, writeTestFile } from './test-generator.js'
 import { generateDocs, writeDocsFile } from './docs-generator.js'
+
+// Max components processed concurrently (avoids memory spikes on large repos)
+const CONCURRENCY_LIMIT = 5
 
 // ===========================================
 // Types
@@ -78,10 +81,13 @@ export interface InitResult {
 
 interface HashCache {
   version: string
-  components: Record<string, {
-    hash: string
-    lastSync: string
-  }>
+  components: Record<
+    string,
+    {
+      hash: string
+      lastSync: string
+    }
+  >
 }
 
 function loadCache(rootDir: string): HashCache {
@@ -98,10 +104,17 @@ function loadCache(rootDir: string): HashCache {
 
 function saveCache(rootDir: string, cache: HashCache): void {
   const cachePath = path.join(rootDir, CACHE.FILENAME)
+  const tmpPath = `${cachePath}.tmp`
   try {
-    fs.writeFileSync(cachePath, JSON.stringify(cache, null, 2))
+    fs.writeFileSync(tmpPath, JSON.stringify(cache, null, 2))
+    fs.renameSync(tmpPath, cachePath)
   } catch {
-    // Ignore cache write errors
+    // Clean up temp file on failure
+    try {
+      fs.unlinkSync(tmpPath)
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -111,6 +124,22 @@ function hashFile(filePath: string): string {
     return crypto.createHash('md5').update(content).digest('hex')
   } catch {
     return ''
+  }
+}
+
+/**
+ * Remove cache entries for files that no longer exist on disk.
+ * Prevents ghost entries from accumulating over time.
+ */
+function pruneStaleCache(
+  rootDir: string,
+  cache: HashCache,
+  scannedPaths: Set<string>
+): void {
+  for (const cachedPath of Object.keys(cache.components)) {
+    if (!scannedPaths.has(cachedPath)) {
+      delete cache.components[cachedPath]
+    }
   }
 }
 
@@ -159,7 +188,7 @@ export async function initializeComponents(
     dryRun = false,
     library,
     filter,
-    maxComponents,
+    maxComponents
   } = options
 
   const result: InitResult = {
@@ -168,7 +197,7 @@ export async function initializeComponents(
     updated: { stories: 0, tests: 0, docs: 0 },
     skipped: 0,
     errors: [],
-    details: [],
+    details: []
   }
 
   // Load cache for change detection
@@ -179,6 +208,10 @@ export async function initializeComponents(
   let components = await scanComponents(config, { library })
   result.scanned = components.length
 
+  // Prune stale cache entries for files that no longer exist
+  const scannedPaths = new Set(components.map(c => c.filePath))
+  pruneStaleCache(config.rootDir, cache, scannedPaths)
+
   // Apply license limit
   let limitApplied = false
   if (maxComponents && maxComponents < components.length) {
@@ -186,46 +219,55 @@ export async function initializeComponents(
     limitApplied = true
   }
 
-  console.error(`[storybook-mcp] Scanning ${components.length} components...${limitApplied ? ` (limited from ${result.scanned})` : ''}`)
+  console.error(
+    `[storybook-mcp] Scanning ${components.length} components...${limitApplied ? ` (limited from ${result.scanned})` : ''}`
+  )
 
-  for (const component of components) {
-    // Apply filter if specified
-    if (filter && !component.name.toLowerCase().includes(filter.toLowerCase())) {
-      result.skipped++
-      continue
-    }
-
-    try {
-      const syncResult = await syncComponent(
-        config,
-        component,
-        cache,
-        newCache,
-        {
-          generateStories,
-          generateTests,
-          generateDocs,
-          updateExisting,
-          dryRun,
+  // Process components in concurrent batches for speed on large repos
+  for (let i = 0; i < components.length; i += CONCURRENCY_LIMIT) {
+    const batch = components.slice(i, i + CONCURRENCY_LIMIT)
+    await Promise.all(
+      batch.map(async component => {
+        // Apply filter if specified
+        if (
+          filter &&
+          !component.name.toLowerCase().includes(filter.toLowerCase())
+        ) {
+          result.skipped++
+          return
         }
-      )
 
-      result.details.push(syncResult)
+        try {
+          const syncResult = await syncComponent(
+            config,
+            component,
+            cache,
+            newCache,
+            {
+              generateStories,
+              generateTests,
+              generateDocs,
+              updateExisting,
+              dryRun
+            }
+          )
 
-      // Count actions
-      if (syncResult.story.action === 'created') result.created.stories++
-      if (syncResult.story.action === 'updated') result.updated.stories++
-      if (syncResult.test.action === 'created') result.created.tests++
-      if (syncResult.test.action === 'updated') result.updated.tests++
-      if (syncResult.docs.action === 'created') result.created.docs++
-      if (syncResult.docs.action === 'updated') result.updated.docs++
+          result.details.push(syncResult)
 
-    } catch (error) {
-      result.errors.push({
-        component: component.name,
-        error: error instanceof Error ? error.message : String(error),
+          if (syncResult.story.action === 'created') result.created.stories++
+          if (syncResult.story.action === 'updated') result.updated.stories++
+          if (syncResult.test.action === 'created') result.created.tests++
+          if (syncResult.test.action === 'updated') result.updated.tests++
+          if (syncResult.docs.action === 'created') result.created.docs++
+          if (syncResult.docs.action === 'updated') result.updated.docs++
+        } catch (error) {
+          result.errors.push({
+            component: component.name,
+            error: error instanceof Error ? error.message : String(error)
+          })
+        }
       })
-    }
+    )
   }
 
   // Save updated cache
@@ -234,19 +276,25 @@ export async function initializeComponents(
   }
 
   // Log summary
-  const totalCreated = result.created.stories + result.created.tests + result.created.docs
-  const totalUpdated = result.updated.stories + result.updated.tests + result.updated.docs
-  
+  const totalCreated =
+    result.created.stories + result.created.tests + result.created.docs
+  const totalUpdated =
+    result.updated.stories + result.updated.tests + result.updated.docs
+
   console.error(`[storybook-mcp] Sync complete:`)
   console.error(`  Scanned: ${result.scanned} components`)
-  console.error(`  Created: ${totalCreated} files (${result.created.stories} stories, ${result.created.tests} tests, ${result.created.docs} docs)`)
+  console.error(
+    `  Created: ${totalCreated} files (${result.created.stories} stories, ${result.created.tests} tests, ${result.created.docs} docs)`
+  )
   console.error(`  Updated: ${totalUpdated} files`)
   console.error(`  Skipped: ${result.skipped}`)
   if (result.errors.length > 0) {
     console.error(`  Errors: ${result.errors.length}`)
   }
   if (limitApplied && maxComponents) {
-    console.error(`\n⚠️  Free tier limit: Only ${maxComponents} components processed.`)
+    console.error(
+      `\n⚠️  Free tier limit: Only ${maxComponents} components processed.`
+    )
     console.error(`   Upgrade to Pro for unlimited: ${POLAR_UPGRADE_URL}`)
   }
 
@@ -269,25 +317,32 @@ async function syncComponent(
     dryRun: boolean
   }
 ): Promise<SyncResult> {
-  const { generateStories: shouldGenStories, generateTests: shouldGenTests, generateDocs: shouldGenDocs, updateExisting, dryRun } = options
-  
+  const {
+    generateStories: shouldGenStories,
+    generateTests: shouldGenTests,
+    generateDocs: shouldGenDocs,
+    updateExisting,
+    dryRun
+  } = options
+
   const componentFullPath = path.join(config.rootDir, component.filePath)
   const componentHash = hashFile(componentFullPath)
   const cachedComponent = oldCache.components[component.filePath]
-  const componentChanged = !cachedComponent || cachedComponent.hash !== componentHash
+  const componentChanged =
+    !cachedComponent || cachedComponent.hash !== componentHash
 
   const result: SyncResult = {
     component: component.name,
     path: component.filePath,
     story: { action: 'skipped' },
     test: { action: 'skipped' },
-    docs: { action: 'skipped' },
+    docs: { action: 'skipped' }
   }
 
   // Update cache entry
   newCache.components[component.filePath] = {
     hash: componentHash,
-    lastSync: new Date().toISOString(),
+    lastSync: new Date().toISOString()
   }
 
   // Analyze component for generation
@@ -310,7 +365,7 @@ async function syncComponent(
       const story = await generateStory(config, componentAnalysis, {
         componentPath: component.filePath,
         includeVariants: true,
-        includeInteractive: true,
+        includeInteractive: true
       })
 
       if (!dryRun) {
@@ -318,7 +373,6 @@ async function syncComponent(
       }
 
       result.story = { action: 'created', path: storyPath }
-
     } else if (updateExisting && componentChanged) {
       // Update existing story if component changed
       const componentAnalysis = await getAnalysis()
@@ -326,15 +380,18 @@ async function syncComponent(
         componentPath: component.filePath,
         includeVariants: true,
         includeInteractive: true,
-        overwrite: true,
+        overwrite: true
       })
 
       if (!dryRun) {
         await writeStoryFile(config, story, true)
       }
 
-      result.story = { action: 'updated', path: storyPath, reason: 'component changed' }
-
+      result.story = {
+        action: 'updated',
+        path: storyPath,
+        reason: 'component changed'
+      }
     } else {
       result.story = { action: 'unchanged', path: storyPath }
     }
@@ -354,7 +411,6 @@ async function syncComponent(
       }
 
       result.test = { action: 'created', path: testPath }
-
     } else if (updateExisting && componentChanged) {
       const componentAnalysis = await getAnalysis()
       const test = await generateTest(config, componentAnalysis)
@@ -363,8 +419,11 @@ async function syncComponent(
         await writeTestFile(config, test, true)
       }
 
-      result.test = { action: 'updated', path: testPath, reason: 'component changed' }
-
+      result.test = {
+        action: 'updated',
+        path: testPath,
+        reason: 'component changed'
+      }
     } else {
       result.test = { action: 'unchanged', path: testPath }
     }
@@ -384,7 +443,6 @@ async function syncComponent(
       }
 
       result.docs = { action: 'created', path: docsPath }
-
     } else if (updateExisting && componentChanged) {
       const componentAnalysis = await getAnalysis()
       const docs = await generateDocs(config, componentAnalysis)
@@ -393,8 +451,11 @@ async function syncComponent(
         await writeDocsFile(config, docs, true)
       }
 
-      result.docs = { action: 'updated', path: docsPath, reason: 'component changed' }
-
+      result.docs = {
+        action: 'updated',
+        path: docsPath,
+        reason: 'component changed'
+      }
     } else {
       result.docs = { action: 'unchanged', path: docsPath }
     }
@@ -412,25 +473,29 @@ export async function syncSingleComponent(
   options: Partial<InitOptions> = {}
 ): Promise<SyncResult> {
   const analysis = await analyzeComponent(config, componentPath)
-  
+
   const component: ComponentInfo = {
     name: analysis.name,
     filePath: componentPath,
     library: analysis.library,
     hasStory: analysis.hasStory,
     storyPath: analysis.storyPath,
-    exportType: analysis.exportType,
+    exportType: analysis.exportType
   }
 
   const cache = loadCache(config.rootDir)
-  const newCache = { ...cache }
+  // Deep-copy components map so mutations inside syncComponent don't corrupt the old cache
+  const newCache: HashCache = {
+    version: cache.version,
+    components: { ...cache.components }
+  }
 
   const result = await syncComponent(config, component, cache, newCache, {
     generateStories: options.generateStories ?? true,
     generateTests: options.generateTests ?? true,
     generateDocs: options.generateDocs ?? true,
     updateExisting: true,
-    dryRun: options.dryRun ?? false,
+    dryRun: options.dryRun ?? false
   })
 
   if (!options.dryRun) {
@@ -438,4 +503,252 @@ export async function syncSingleComponent(
   }
 
   return result
+}
+// ===========================================
+// File Watcher
+// ===========================================
+
+export interface WatchOptions {
+  /** Generate stories for new/changed components */
+  generateStories?: boolean
+  /** Generate test files for new/changed components */
+  generateTests?: boolean
+  /** Generate MDX docs for new/changed components */
+  generateDocs?: boolean
+  /** Debounce delay after a file event before syncing (ms, default: 500) */
+  debounceMs?: number
+  /** Interval for the periodic catch-up rescan (ms, default: 30000) */
+  rescanIntervalMs?: number
+}
+
+/**
+ * Returns true if the absolute path looks like a component source file
+ * (matches a configured library, is .tsx, is not a story/test/spec/index file).
+ */
+function isComponentFile(
+  config: StorybookMCPConfig,
+  absolutePath: string
+): boolean {
+  const basename = path.basename(absolutePath)
+  if (!basename.endsWith('.tsx') && !basename.endsWith('.ts')) return false
+  if (
+    basename.endsWith('.stories.tsx') ||
+    basename.endsWith('.stories.ts') ||
+    basename.endsWith('.test.tsx') ||
+    basename.endsWith('.test.ts') ||
+    basename.endsWith('.spec.tsx') ||
+    basename.endsWith('.spec.ts')
+  )
+    return false
+  // Must live inside a configured library directory
+  return config.libraries.some(lib => {
+    const libAbs = path.resolve(config.rootDir, lib.path)
+    return (
+      absolutePath.startsWith(libAbs + path.sep) ||
+      absolutePath.startsWith(libAbs + '/')
+    )
+  })
+}
+
+/**
+ * Watch configured library directories for component changes and auto-sync.
+ *
+ * Uses fs.watch (recursive) as the primary mechanism, with a periodic
+ * catch-up rescan to handle any events missed (especially on Linux where
+ * recursive watch has limited kernel support).
+ *
+ * @returns A stop function — call it to close all watchers and clear timers.
+ */
+export function startFileWatcher(
+  config: StorybookMCPConfig,
+  options: WatchOptions = {}
+): () => void {
+  const {
+    generateStories = true,
+    generateTests = true,
+    generateDocs = true,
+    debounceMs = 500,
+    rescanIntervalMs = 30_000
+  } = options
+
+  const watchers: import('fs').FSWatcher[] = []
+  const pendingTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  let rescanTimer: ReturnType<typeof setInterval> | null = null
+  let stopped = false
+
+  // -------------------------------------------------------
+  // Process a single file path after debounce
+  // -------------------------------------------------------
+  async function handleFile(absolutePath: string): Promise<void> {
+    if (stopped) return
+    if (!isComponentFile(config, absolutePath)) return
+
+    // File may have been deleted
+    if (!fs.existsSync(absolutePath)) {
+      // Remove from cache so it will be treated as new if re-added later
+      const cache = loadCache(config.rootDir)
+      const relPath = path.relative(config.rootDir, absolutePath)
+      if (relPath in cache.components) {
+        delete cache.components[relPath]
+        saveCache(config.rootDir, cache)
+        console.error(
+          `[storybook-mcp] Removed deleted component from cache: ${relPath}`
+        )
+      }
+      return
+    }
+
+    const relPath = path.relative(config.rootDir, absolutePath)
+    console.error(`[storybook-mcp] 👁  Detected change: ${relPath}`)
+
+    try {
+      const syncResult = await syncSingleComponent(config, relPath, {
+        generateStories,
+        generateTests,
+        generateDocs,
+        updateExisting: true
+      })
+
+      const actions = [
+        syncResult.story.action !== 'skipped' &&
+        syncResult.story.action !== 'unchanged'
+          ? `story: ${syncResult.story.action}`
+          : null,
+        syncResult.test.action !== 'skipped' &&
+        syncResult.test.action !== 'unchanged'
+          ? `test: ${syncResult.test.action}`
+          : null,
+        syncResult.docs.action !== 'skipped' &&
+        syncResult.docs.action !== 'unchanged'
+          ? `docs: ${syncResult.docs.action}`
+          : null
+      ].filter(Boolean)
+
+      if (actions.length > 0) {
+        console.error(
+          `[storybook-mcp] ✓ ${syncResult.component}: ${actions.join(', ')}`
+        )
+      }
+    } catch (err) {
+      console.error(
+        `[storybook-mcp] Watch sync error for ${relPath}: ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
+  }
+
+  // -------------------------------------------------------
+  // Debounced event handler
+  // -------------------------------------------------------
+  function onEvent(filename: string | null, watchRoot: string): void {
+    if (!filename) return
+    const absolutePath = path.join(watchRoot, filename)
+
+    const existing = pendingTimers.get(absolutePath)
+    if (existing) clearTimeout(existing)
+
+    const timer = setTimeout(() => {
+      pendingTimers.delete(absolutePath)
+      handleFile(absolutePath).catch(err =>
+        console.error(`[storybook-mcp] Unhandled watch error: ${err}`)
+      )
+    }, debounceMs)
+
+    pendingTimers.set(absolutePath, timer)
+  }
+
+  // -------------------------------------------------------
+  // Start a watcher for each library root
+  // -------------------------------------------------------
+  for (const lib of config.libraries) {
+    const watchRoot = path.resolve(config.rootDir, lib.path)
+    if (!fs.existsSync(watchRoot)) continue
+
+    try {
+      const watcher = fs.watch(
+        watchRoot,
+        { recursive: true },
+        (_event, filename) => {
+          onEvent(filename, watchRoot)
+        }
+      )
+      watcher.on('error', err =>
+        console.error(
+          `[storybook-mcp] Watcher error (${lib.path}): ${(err as Error).message}`
+        )
+      )
+      watchers.push(watcher)
+      console.error(`[storybook-mcp] 👁  Watching: ${lib.path}`)
+    } catch (err) {
+      // fs.watch can fail on some network file systems — degrade gracefully
+      console.error(
+        `[storybook-mcp] Could not start watcher for ${lib.path} (will rely on periodic rescan): ${(err as Error).message}`
+      )
+    }
+  }
+
+  // -------------------------------------------------------
+  // Periodic catch-up rescan
+  // Catches events missed by fs.watch (Linux recursive limitations,
+  // network drives, very rapid creation of many files, etc.)
+  // -------------------------------------------------------
+  rescanTimer = setInterval(async () => {
+    if (stopped) return
+    try {
+      const cache = loadCache(config.rootDir)
+      const components = await scanComponents(config)
+
+      // Find components that are new (not in cache) or changed (hash mismatch)
+      const needsSync = components.filter(comp => {
+        const fullPath = path.join(config.rootDir, comp.filePath)
+        const currentHash = hashFile(fullPath)
+        const cached = cache.components[comp.filePath]
+        return !cached || cached.hash !== currentHash
+      })
+
+      if (needsSync.length > 0) {
+        console.error(
+          `[storybook-mcp] Rescan found ${needsSync.length} component(s) to sync`
+        )
+        for (let i = 0; i < needsSync.length; i += CONCURRENCY_LIMIT) {
+          await Promise.all(
+            needsSync.slice(i, i + CONCURRENCY_LIMIT).map(async comp => {
+              try {
+                await syncSingleComponent(config, comp.filePath, {
+                  generateStories,
+                  generateTests,
+                  generateDocs,
+                  updateExisting: true
+                })
+              } catch (err) {
+                console.error(
+                  `[storybook-mcp] Rescan sync error for ${comp.filePath}: ${err instanceof Error ? err.message : String(err)}`
+                )
+              }
+            })
+          )
+        }
+      }
+    } catch (err) {
+      console.error(
+        `[storybook-mcp] Periodic rescan error: ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
+  }, rescanIntervalMs)
+
+  // -------------------------------------------------------
+  // Stop function
+  // -------------------------------------------------------
+  return function stop(): void {
+    stopped = true
+    for (const watcher of watchers) {
+      try {
+        watcher.close()
+      } catch {
+        /* ignore */
+      }
+    }
+    if (rescanTimer !== null) clearInterval(rescanTimer)
+    for (const timer of pendingTimers.values()) clearTimeout(timer)
+    pendingTimers.clear()
+  }
 }

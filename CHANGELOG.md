@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-02-23
+
+### Added
+
+- **Background file watcher** (`startFileWatcher`) — watches all configured library directories with `fs.watch({ recursive })`, debounced at 500 ms per file. Auto-syncs new and changed components without a server restart. A periodic 30-second rescan covers events missed by the OS watcher (Linux, network drives).
+- **`--no-watch` CLI flag** — disables background watching for CI / `--init-only` pipelines.
+- **`storybook-mcp.config.json` auto-generation** — created on first run from auto-detected values. `--setup` always writes/refreshes it. `package.json#storybook-mcp` entries are migrated automatically.
+- **`.env` / `.env.local` loading** — `STORYBOOK_MCP_LICENSE` and other env vars are now loaded from the project root before any config or license work, with `.env.local` taking priority.
+- **`--reset-license` flag** — clears the Polar API cache file and in-memory cache, forcing a fresh validation on next run.
+- **`resetLicenseCache()` export** — programmatic cache clearing from library consumers.
+- **`forceRefresh` param on `validateLicenseAsync()`** — bypass all caches and hit the API immediately.
+
+### Changed
+
+- **Tests and docs unlocked for Free tier** — `generate_test`, `generate_docs`, and the test/docs paths inside `sync_all` / `sync_component` no longer require a Pro license. Pro retains: unlimited sync, advanced templates, `update_story`, and Figma Code Connect.
+- **Free tier component limit corrected to 10** — was hardcoded as `5` throughout `license.ts` despite the `FREE_TIER_MAX_SYNC = 10` constant and README both stating 10.
+- **Concurrent component processing** — startup sync and periodic rescan now process components in batches of 5 concurrently instead of sequentially.
+
+### Fixed
+
+- **`console.log` stdout corruption** — the Pro license success message was writing to stdout (MCP JSON-RPC channel), which could corrupt tool responses. Moved to `console.error`.
+- **Atomic cache writes** — `saveCache` now writes to `.storybook-mcp-cache.json.tmp` then renames atomically, preventing cache corruption on crash or SIGKILL.
+- **`syncSingleComponent` cache mutation bug** — shallow `{ ...cache }` shared the inner `components` map by reference; mutations during sync were corrupting the original cache object.
+- **Stale cache pruning** — deleted component files are now removed from the hash cache on every sync, preventing ghost entries.
+- **Actionable license error messages** — validation failures now log HTTP status, rejection reason (`status=revoked`, `expired`), or network error details instead of silently falling back to Free tier.
+
 ## [0.11.0] - 2026-02-18
 
 ### Added

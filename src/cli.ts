@@ -17,7 +17,7 @@ import path from 'node:path'
 import { runServer } from './index.js'
 import type { StorybookMCPConfig } from './types.js'
 import { DEFAULT_CONFIG } from './types.js'
-import { initializeComponents } from './utils/initializer.js'
+import { initializeComponents, startFileWatcher } from './utils/initializer.js'
 import { validateLicenseAsync, resetLicenseCache } from './utils/license.js'
 import { runSetup } from './utils/setup.js'
 import { runPreflight } from './utils/preflight.js'
@@ -137,6 +137,7 @@ function parseArgs(): {
   setup: boolean
   force: boolean
   resetLicense: boolean
+  noWatch: boolean
   libName?: string
 } {
   const args = process.argv.slice(2)
@@ -160,6 +161,7 @@ function parseArgs(): {
     setup: args.includes('--setup'),
     force: args.includes('--force'),
     resetLicense: args.includes('--reset-license'),
+    noWatch: args.includes('--no-watch'),
     libName
   }
 }
@@ -186,6 +188,7 @@ OPTIONS:
   --no-tests      Don't generate test files  
   --no-docs       Don't generate MDX docs
   --no-update     Don't update existing files
+  --no-watch      Disable background file watching (watcher is on by default)
   --force         Overwrite existing files
   --reset-license Clear the cached license result and re-validate against Polar API
   -h, --help      Show this help message
@@ -450,8 +453,38 @@ Use --setup --dry-run to preview without writing files.
     console.error(`[storybook-mcp] Skipping initialization (--skip-init)`)
   }
 
+  // Start background file watcher unless disabled or dry-run
+  let stopWatcher: (() => void) | null = null
+  if (!args.noWatch && !args.dryRun) {
+    stopWatcher = startFileWatcher(config, {
+      generateStories: !args.noStories,
+      generateTests: !args.noTests,
+      generateDocs: !args.noDocs
+    })
+  } else if (args.noWatch) {
+    console.error(`[storybook-mcp] File watching disabled (--no-watch)`)
+  }
+
+  // Ensure watcher is cleaned up on process exit
+  const cleanup = () => {
+    if (stopWatcher) {
+      stopWatcher()
+      stopWatcher = null
+    }
+  }
+  process.once('SIGINT', () => {
+    cleanup()
+    process.exit(0)
+  })
+  process.once('SIGTERM', () => {
+    cleanup()
+    process.exit(0)
+  })
+  process.once('exit', cleanup)
+
   console.error(`[storybook-mcp] Starting MCP server...`)
   await runServer(config)
+  cleanup()
 }
 
 /**

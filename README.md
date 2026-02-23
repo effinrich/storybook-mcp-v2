@@ -23,19 +23,23 @@ Perfect for individuals and trying out the tool.
 
 - ✅ List and analyze components
 - ✅ Generate basic stories (`basic` template)
+- ✅ **Test generation** (Playwright/Vitest)
+- ✅ **Docs generation** (MDX)
 - ✅ Sync up to 10 components per run
-- ❌ Advanced templates (`with-msw`, `form`, etc.)
-- ❌ Test generation (`generate_test`)
-- ❌ Docs generation (`generate_docs`)
+- ✅ `.env` / `.env.local` license key loading
+- ❌ Advanced templates (`with-msw`, `form`, `with-router`, etc.)
+- ❌ Unlimited sync (beyond 10 components)
+- ❌ `update_story` (smart merge regeneration)
+- ❌ Figma Code Connect generation
 
 ### Pro Tier — ~~$49~~ $29 (Launch Price · Lifetime License)
 
 For professional teams requiring complete coverage.
 
-- ✅ **Unlimited** sync
-- ✅ **All** templates (Interactive, MSW, Router, etc.)
-- ✅ **Test generation** (Playwright/Vitest)
-- ✅ **Docs generation** (MDX)
+- ✅ **Unlimited** sync (no component cap)
+- ✅ **All** advanced templates (Interactive, MSW, Router, Form, etc.)
+- ✅ **`update_story`** — smart merge regeneration (preserves your custom exports)
+- ✅ **Figma Code Connect** generation
 - ✅ Priority support
 - ✅ Lifetime updates — no subscription
 
@@ -69,15 +73,36 @@ A **Model Context Protocol (MCP) server** for Storybook story generation, compon
 
 ---
 
-## 🎉 What's New in v0.11
+## 🎉 What's New in v0.12
 
-- ✅ **`update_story`** — Regenerate a story file while preserving any custom exports you've written. No more choosing between a fresh template and your hand-crafted stories.
-- ✅ **`generate_code_connect`** — Generate Figma Code Connect `.figma.tsx` files from component analysis. Publish with `npx figma connect publish` so designers see your real component code in Figma Dev Mode.
-- ✅ **Story version tracking** — Every `generate_story` / `update_story` call records an entry in `.forgekit/story-history.json` (up to 10 versions per story path).
-- ✅ **Import validation** — Non-blocking warnings when generated stories reference imports that can't be resolved.
-- ✅ **Figma Code to Canvas** — Part of `forgekit-context`: push Storybook story renders into Figma as editable frames (requires Figma desktop app with Dev Mode MCP server enabled).
+### 🔑 License detection overhaul
+- **`.env` / `.env.local` support** — `STORYBOOK_MCP_LICENSE` is now loaded automatically from the project root, no shell export required. `.env.local` takes priority over `.env`; both are overridden by a system env var or MCP client config.
+- **`--reset-license` flag** — clears the 24-hour Polar API cache and forces a fresh validation. Essential escape hatch when a key was previously rejected due to a network hiccup.
+- **Actionable error messages** — validation failures now log the exact reason (HTTP status, `status=revoked`, `expired`, network timeout) instead of a silent fallback to Free tier.
+- **Fixed `console.log` stdout corruption** — success message was writing to stdout (the MCP JSON-RPC channel), which could silently break tool responses. Moved to `console.error`.
 
-**Upgrading from 0.10.x?** Run `npm install forgekit-storybook-mcp@latest`. No breaking changes. Check the [CHANGELOG](./CHANGELOG.md) for full details.
+### 📦 Tests & Docs unlocked for Free tier
+- `generate_test`, `generate_docs`, and `sync_all` with tests/docs now work without a Pro license.
+- Pro retains: unlimited sync, all advanced templates, `update_story`, and Figma Code Connect.
+
+### 🗂 Config file auto-generation
+- **`storybook-mcp.config.json` is now created automatically** on first run if it doesn't exist — populated with auto-detected framework and library paths.
+- `--setup` always writes/refreshes the config file after bootstrapping `.storybook/`.
+- Existing `package.json#storybook-mcp` configs are **migrated** to the standalone file automatically.
+
+### 👁 Background file watching
+- **Live sync** — the server now watches all configured library directories with `fs.watch({ recursive })` and re-syncs any changed component within 500 ms (debounced).
+- **Periodic catch-up rescan** every 30 seconds covers events missed by `fs.watch` (Linux kernel limitations, network drives, bulk renames).
+- New `--no-watch` flag to disable watching (useful in CI or `--init-only` pipelines).
+- Clean shutdown on `SIGINT` / `SIGTERM` — watchers and timers are always closed.
+
+### ⚡ Performance & reliability
+- **Concurrent sync** — components are processed in parallel batches of 5, making large repos significantly faster on startup.
+- **Atomic cache writes** — cache file is written to `.tmp` then renamed, preventing corruption on crash or kill signal.
+- **Stale cache pruning** — deleted components are removed from the hash cache automatically.
+- **`syncSingleComponent` deep copy fix** — shallow `{ ...cache }` was sharing inner object references, allowing mutations to corrupt the old cache state.
+
+**Upgrading from 0.11.x?** Run `npm install forgekit-storybook-mcp@latest`. No breaking changes. See [CHANGELOG](./CHANGELOG.md) for full details.
 
 ---
 
