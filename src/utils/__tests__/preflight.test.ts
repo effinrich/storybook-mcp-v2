@@ -19,13 +19,15 @@ describe('preflight', () => {
     // Empty project - no node_modules
     const result = await runPreflight(tmpDir)
     expect(result.passed).toBe(false)
-    
+
     // Should flag missing packages
     const failedChecks = result.checks.filter(c => c.status === 'fail')
     expect(failedChecks.length).toBeGreaterThan(0)
-    
+
     // Should specifically flag @storybook/addon-docs
-    const addonDocsCheck = result.checks.find(c => c.name === 'package:@storybook/addon-docs')
+    const addonDocsCheck = result.checks.find(
+      c => c.name === 'package:@storybook/addon-docs'
+    )
     expect(addonDocsCheck).toBeDefined()
     expect(addonDocsCheck!.status).toBe('fail')
   })
@@ -79,11 +81,19 @@ describe('preflight', () => {
     fs.mkdirSync(colocated, { recursive: true })
     fs.mkdirSync(scaffold, { recursive: true })
 
-    fs.writeFileSync(path.join(colocated, 'Button.stories.tsx'), `export default {}`)
-    fs.writeFileSync(path.join(scaffold, 'Button.stories.ts'), `export default {}`)
+    fs.writeFileSync(
+      path.join(colocated, 'Button.stories.tsx'),
+      `export default {}`
+    )
+    fs.writeFileSync(
+      path.join(scaffold, 'Button.stories.ts'),
+      `export default {}`
+    )
 
     const result = await runPreflight(dir)
-    const dupCheck = result.checks.find(c => c.name === 'stories:duplicates:button')
+    const dupCheck = result.checks.find(
+      c => c.name === 'stories:duplicates:button'
+    )
     expect(dupCheck).toBeDefined()
     expect(dupCheck!.status).toBe('fail')
     // Fix should point to the scaffold file

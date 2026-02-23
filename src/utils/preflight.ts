@@ -263,14 +263,16 @@ async function checkDuplicateStoryIds(
   checks: PreflightCheck[]
 ): Promise<void> {
   try {
-    const storyFiles = await fg(
-      ['**/*.stories.{ts,tsx,js,jsx}', '**/*.mdx'],
-      {
-        cwd: rootDir,
-        ignore: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/build/**'],
-        absolute: false,
-      }
-    )
+    const storyFiles = await fg(['**/*.stories.{ts,tsx,js,jsx}', '**/*.mdx'], {
+      cwd: rootDir,
+      ignore: [
+        '**/node_modules/**',
+        '**/dist/**',
+        '**/.next/**',
+        '**/build/**'
+      ],
+      absolute: false
+    })
 
     // Group files by normalised basename (case-insensitive, no extension)
     const byBasename = new Map<string, string[]>()
@@ -297,7 +299,7 @@ async function checkDuplicateStoryIds(
       checks.push({
         name: 'stories:duplicates',
         status: 'pass',
-        message: 'No duplicate story files detected',
+        message: 'No duplicate story files detected'
       })
       return
     }
@@ -305,8 +307,8 @@ async function checkDuplicateStoryIds(
     for (const { name, files } of duplicates) {
       // Identify which files look like Storybook scaffold boilerplate:
       // they live in a root-level src/stories/ or stories/ directory.
-      const scaffoldFiles = files.filter(f =>
-        /^src[\/]stories[\/]/i.test(f) || /^stories[\/]/i.test(f)
+      const scaffoldFiles = files.filter(
+        f => /^src[\/]stories[\/]/i.test(f) || /^stories[\/]/i.test(f)
       )
       const fix =
         scaffoldFiles.length > 0
@@ -317,7 +319,7 @@ async function checkDuplicateStoryIds(
         name: `stories:duplicates:${name}`,
         status: 'fail',
         message: `Duplicate story files for "${name}": ${files.map(f => `./${f}`).join(', ')}`,
-        fix,
+        fix
       })
     }
   } catch {
