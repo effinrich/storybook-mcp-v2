@@ -51,14 +51,77 @@ describe('setup - detection', () => {
     expect(detectFramework(dir)).toBe('chakra')
   })
 
-  it('detectFramework detects shadcn', () => {
-    const dir = path.join(tmpDir, 'shadcn-proj')
+  it('detectFramework detects shadcn via class-variance-authority', () => {
+    const dir = path.join(tmpDir, 'shadcn-cva')
     fs.mkdirSync(dir, { recursive: true })
     fs.writeFileSync(
       path.join(dir, 'package.json'),
       JSON.stringify({
         dependencies: { 'class-variance-authority': '^1.0.0' }
       })
+    )
+    expect(detectFramework(dir)).toBe('shadcn')
+  })
+
+  it('detectFramework detects shadcn via tailwindcss only', () => {
+    const dir = path.join(tmpDir, 'shadcn-tw')
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(
+      path.join(dir, 'package.json'),
+      JSON.stringify({
+        devDependencies: { tailwindcss: '^4.0.0' }
+      })
+    )
+    expect(detectFramework(dir)).toBe('shadcn')
+  })
+
+  it('detectFramework detects shadcn via any @radix-ui/* package', () => {
+    const dir = path.join(tmpDir, 'shadcn-radix')
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(
+      path.join(dir, 'package.json'),
+      JSON.stringify({
+        dependencies: { '@radix-ui/react-dialog': '^2.0.0' }
+      })
+    )
+    expect(detectFramework(dir)).toBe('shadcn')
+  })
+
+  it('detectFramework detects shadcn via @base-ui-components/react', () => {
+    const dir = path.join(tmpDir, 'shadcn-baseui')
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(
+      path.join(dir, 'package.json'),
+      JSON.stringify({
+        dependencies: { '@base-ui-components/react': '^1.0.0' }
+      })
+    )
+    expect(detectFramework(dir)).toBe('shadcn')
+  })
+
+  it('detectFramework detects shadcn via lucide-react', () => {
+    const dir = path.join(tmpDir, 'shadcn-lucide')
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(
+      path.join(dir, 'package.json'),
+      JSON.stringify({
+        dependencies: { 'lucide-react': '^0.400.0' }
+      })
+    )
+    expect(detectFramework(dir)).toBe('shadcn')
+  })
+
+  it('detectFramework detects shadcn via components.json alone', () => {
+    const dir = path.join(tmpDir, 'shadcn-compjson')
+    fs.mkdirSync(dir, { recursive: true })
+    // package.json with no recognisable deps
+    fs.writeFileSync(
+      path.join(dir, 'package.json'),
+      JSON.stringify({ dependencies: {} })
+    )
+    fs.writeFileSync(
+      path.join(dir, 'components.json'),
+      JSON.stringify({ style: 'default' })
     )
     expect(detectFramework(dir)).toBe('shadcn')
   })

@@ -605,15 +605,34 @@ async function autoDetectConfig(rootDir: string): Promise<StorybookMCPConfig> {
 
     if (deps['@chakra-ui/react']) {
       framework = 'chakra'
-    } else if (
-      deps['@radix-ui/react-slot'] ||
-      deps['class-variance-authority']
-    ) {
-      framework = 'shadcn'
-    } else if (deps['tamagui']) {
-      framework = 'tamagui'
-    } else if (deps['@gluestack-ui/themed'] || deps['@gluestack-ui/config']) {
-      framework = 'gluestack'
+    } else {
+      // shadcn/ui detection — cast a wide net:
+      //   components.json  → definitive shadcn CLI project
+      //   @radix-ui/*      → any Radix primitive (traditional shadcn)
+      //   @base-ui-components/react → Base UI (newer shadcn replacement for Radix)
+      //   class-variance-authority → cva, canonical shadcn pattern
+      //   tailwindcss      → almost always paired with shadcn in React projects
+      //   lucide-react     → the default icon set bundled by shadcn CLI
+      const hasComponentsJson = fs.existsSync(
+        path.join(rootDir, 'components.json')
+      )
+      const hasAnyRadix = Object.keys(deps).some(k =>
+        k.startsWith('@radix-ui/')
+      )
+      if (
+        hasComponentsJson ||
+        hasAnyRadix ||
+        deps['@base-ui-components/react'] ||
+        deps['class-variance-authority'] ||
+        deps['lucide-react'] ||
+        deps.tailwindcss
+      ) {
+        framework = 'shadcn'
+      } else if (deps['tamagui']) {
+        framework = 'tamagui'
+      } else if (deps['@gluestack-ui/themed'] || deps['@gluestack-ui/config']) {
+        framework = 'gluestack'
+      }
     }
   }
 

@@ -17,7 +17,8 @@ import {
   NON_COMPONENT_FILES,
   THRESHOLDS,
   FILE_EXTENSIONS,
-  STORY_SEARCH_PATHS
+  STORY_SEARCH_PATHS,
+  DIRECTORIES
 } from './constants.js'
 import { FileSystemError, ErrorCode } from './errors.js'
 
@@ -156,6 +157,7 @@ function findStoryFile(rootDir: string, componentPath: string): string | null {
   const dir = path.dirname(componentPath)
   const basename = path.basename(componentPath, path.extname(componentPath))
 
+  // 1. Check co-located and adjacent subdirectory paths (relative to component)
   const possiblePaths = [
     path.join(dir, `${basename}${FILE_EXTENSIONS.STORY_TSX}`),
     path.join(dir, `${basename}${FILE_EXTENSIONS.STORY_TS}`),
@@ -168,6 +170,44 @@ function findStoryFile(rootDir: string, componentPath: string): string | null {
     const fullPath = path.join(rootDir, storyPath)
     if (fs.existsSync(fullPath)) {
       return storyPath
+    }
+  }
+
+  // 2. Check root-level story directories (e.g. src/stories/, stories/).
+  //    These are created by the default Storybook scaffold and many teams keep
+  //    stories separate from source. We walk up the component's path looking
+  //    for a sibling "stories" or "__stories__" directory, then also check
+  //    common top-level locations relative to rootDir.
+  const storyDirNames = [DIRECTORIES.STORIES, DIRECTORIES.STORIES_ALT]
+  const storyExtensions = [FILE_EXTENSIONS.STORY_TSX, FILE_EXTENSIONS.STORY_TS]
+
+  // Collect candidate root-level story directories by walking up from the
+  // component's dir toward the rootDir, and also checking common locations.
+  const candidateDirs: string[] = []
+
+  // Walk up: for each ancestor dir, add a sibling "stories/" dir
+  let current = dir
+  while (current !== '.' && current !== '') {
+    const parent = path.dirname(current)
+    for (const storyDirName of storyDirNames) {
+      candidateDirs.push(path.join(parent, storyDirName))
+    }
+    if (parent === current) break
+    current = parent
+  }
+
+  // Also add top-level "src/stories" and "stories" explicitly
+  for (const storyDirName of storyDirNames) {
+    candidateDirs.push(storyDirName) // stories/
+    candidateDirs.push(path.join('src', storyDirName)) // src/stories/
+  }
+
+  for (const storyDir of candidateDirs) {
+    for (const ext of storyExtensions) {
+      const storyPath = path.join(storyDir, `${basename}${ext}`)
+      if (fs.existsSync(path.join(rootDir, storyPath))) {
+        return storyPath
+      }
     }
   }
 
@@ -270,8 +310,9 @@ function extractProps(source: string, componentName: string): PropDefinition[] {
     // Trim to handle Windows line endings (\r\n) which leave \r at end of line
     const trimmedLine = line.trim()
     const propMatch =
-      trimmedLine.match(/^\s*\/\*\*([^*]*)\*\/\s*(\w+)(\?)?:\s*(.+?)(?:;|$)/s) ||
-      trimmedLine.match(/^\s*(\w+)(\?)?:\s*(.+?)(?:;|$)/)
+      trimmedLine.match(
+        /^\s*\/\*\*([^*]*)\*\/\s*(\w+)(\?)?:\s*(.+?)(?:;|$)/s
+      ) || trimmedLine.match(/^\s*(\w+)(\?)?:\s*(.+?)(?:;|$)/)
 
     if (propMatch) {
       const hasJsDoc = propMatch.length === 5
@@ -316,7 +357,10 @@ function inferControlType(type: string): Partial<PropDefinition> {
   const unionMatch = type.match(
     /^["']([^"']+)["'](?:\s*\|\s*["']([^"']+)["'])+$|^['"](.+?)['"](?:\s*\|\s*['"](.+?)['"])*$/
   )
-  if (unionMatch || ((type.includes("'") || type.includes('"')) && type.includes('|'))) {
+  if (
+    unionMatch ||
+    ((type.includes("'") || type.includes('"')) && type.includes('|'))
+  ) {
     const options = type
       .split('|')
       .map(s => s.trim().replace(/['"]/g, ''))

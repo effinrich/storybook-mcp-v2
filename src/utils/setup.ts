@@ -72,12 +72,27 @@ export function detectFramework(rootDir: string): FrameworkType {
     if (deps['@chakra-ui/react']) {
       return 'chakra'
     }
+
+    // shadcn/ui detection — cast a wide net:
+    //   components.json  → definitive shadcn CLI project
+    //   @radix-ui/*      → any Radix primitive (traditional shadcn)
+    //   @base-ui-components/react → Base UI (newer shadcn replacement for Radix)
+    //   class-variance-authority → cva, canonical shadcn pattern
+    //   tailwindcss      → almost always paired with shadcn in React projects
+    //   lucide-react     → the default icon set bundled by shadcn CLI
+    const hasComponentsJson = fs.existsSync(
+      path.join(rootDir, 'components.json')
+    )
+    const hasAnyRadix = Object.keys(deps).some(k => k.startsWith('@radix-ui/'))
     if (
-      deps['@radix-ui/react-slot'] ||
+      hasComponentsJson ||
+      hasAnyRadix ||
+      deps['@base-ui-components/react'] ||
       deps['class-variance-authority'] ||
+      deps['lucide-react'] ||
       deps.tailwindcss
     ) {
-      // Likely shadcn/ui
+      // Likely shadcn/ui (or a compatible tailwind-based design system)
       return 'shadcn'
     }
     if (deps.tamagui) {
