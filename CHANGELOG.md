@@ -4,6 +4,37 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-02-23
+
+### Fixed
+
+- **Auto-removes Storybook scaffold files that conflict with generated stories** — `npx storybook init` creates boilerplate in `src/stories/` (e.g. `Button.stories.ts`, `Header.stories.ts`). When the MCP server generates co-located stories for real components, these duplicates crash Storybook's file indexer with `Unable to index files`. Every `sync-all` run now detects conflicts and silently deletes the scaffold files before generating, so users never have to manually clean anything up.
+- **Preflight duplicate check auto-remediates** — `check-health` now removes scaffold duplicates (emits `warn` for cleaned up, `fail` only if deletion fails or both files are real non-scaffold stories).
+
+## [1.1.2] - 2026-02-23
+
+### Fixed
+
+- **Preflight reports duplicate story files** — `check-health` now detects when multiple story/MDX files share a basename (e.g. a scaffold `src/stories/Button.stories.ts` alongside a generated `src/components/Button/Button.stories.tsx`). Reports affected paths and fix instructions.
+
+## [1.1.1] - 2026-02-23
+
+### Fixed
+
+- **Framework wrongly detected as `vanilla` on shadcn/ui projects** — `autoDetectConfig()` now checks for `components.json`, any `@radix-ui/*` package, `@base-ui-components/react`, `class-variance-authority`, `lucide-react`, and `tailwindcss` as shadcn signals, in addition to the existing `shadcn-ui` check.
+- **Duplicate story files for co-located component patterns** — `findStoryFile()` now walks up from the component directory and checks sibling `stories/`/`__stories__` folders, plus `src/stories/` and `stories/` at the project root (default Storybook scaffold location).
+
+## [1.1.0] - 2026-02-23
+
+### Added
+
+- **Dynamic Storybook version detection** — `detectInstalledStorybookVersion()` reads the actual installed version from `node_modules/storybook/package.json` before suggesting dependencies. No more hardcoded `^10.2.0` — the suggested deps match what is actually installed.
+- **MDX `availableExports` guard** — `generateDocs()` now accepts an `availableExports` param and only emits `<Canvas>` blocks for story exports that actually exist, preventing broken MDX in projects with sparse story files.
+
+### Fixed
+
+- **MDX `@storybook/addon-docs/blocks` import** — corrected to `@storybook/blocks` (the correct path for Storybook 7+).
+
 ## [0.12.0] - 2026-02-23
 
 ### Added
